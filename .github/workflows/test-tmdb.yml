@@ -1,0 +1,13 @@
+name: Test TMDB
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test TMDB API
+        run: |
+          curl "https://api.themoviedb.org/3/search/movie?api_key=${{ secrets.TMDB_API_KEY }}&query=Interstellar"
