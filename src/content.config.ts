@@ -55,11 +55,11 @@ const movies = defineCollection({
     year: z.number(),
     status: z.enum([
   "watched",
-  "dropped"
+  "dropped",
   "watching",
-  "planned"
+  "planned",
 ]),
-    date_watched: z.coerce.date().optional(),
+    date_finished: z.coerce.date().optional(),
     genres: z.array(z.string()).optional(),
     tags: z.array(z.string()).optional(),
     cover: z.string().optional(),
