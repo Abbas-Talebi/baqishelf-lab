@@ -1,0 +1,59 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import MusicTable from "../../components/MusicTable.astro";
+
+const music =
+  await getCollection("music");
+
+const sortedMusic =
+  [...music].sort(
+    (a, b) =>
+      b.data.personal_rating -
+      a.data.personal_rating
+  );
+---
+
+<BaseLayout title="موسیقی - جدول">
+
+<h1>موسیقی</h1>
+
+<div class="view-switch">
+
+  <a href="/music">
+    نمای کارت
+  </a>
+
+  <a href="/music/table">
+    نمای جدول
+  </a>
+
+</div>
+
+<p>
+  تعداد آثار:
+  {music.length}
+</p>
+
+<MusicTable
+  music={sortedMusic}
+/>
+
+<style>
+
+.view-switch {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.view-switch a {
+  border: 1px solid #333;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+</style>
+
+</BaseLayout>

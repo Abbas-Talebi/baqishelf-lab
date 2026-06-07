@@ -1,0 +1,54 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import GameCard from "../../components/GameCard.astro";
+
+const games = await getCollection("games");
+
+export async function getStaticPaths() {
+  const games = await getCollection("games");
+
+  const platforms = [
+    ...new Set(
+      games.flatMap(
+        (game) => game.data.platforms ?? []
+      )
+    ),
+  ];
+
+  return platforms.map((platform) => ({
+    params: {
+      slug: platform
+        .toLowerCase()
+        .replaceAll(" ", "-"),
+    },
+    props: {
+      platform,
+    },
+  }));
+}
+
+const { platform } = Astro.props;
+
+const platformGames = games.filter(
+  (game) =>
+    game.data.platforms?.includes(platform)
+);
+---
+
+<BaseLayout title={platform}>
+
+<h1>{platform}</h1>
+
+<p>
+  تعداد بازی‌ها:
+  {platformGames.length}
+</p>
+
+{
+  platformGames.map((game) => (
+    <GameCard game={game} />
+  ))
+}
+
+</BaseLayout>

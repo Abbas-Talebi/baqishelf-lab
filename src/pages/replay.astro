@@ -1,0 +1,307 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+
+const games = await getCollection("games");
+const currentYear = new Date().getFullYear();
+
+// فقط بازی‌هایی که در سال جاری تمام شده‌اند
+const yearGames = games.filter(
+  (game) => game.data.date_finished && game.data.date_finished.getFullYear() === currentYear
+);
+
+const totalGames = yearGames.length;
+const hasData = totalGames > 0;
+
+// میانگین امتیاز
+const averageRating = hasData
+  ? (yearGames.reduce((sum, g) => sum + g.data.personal_rating, 0) / totalGames).toFixed(1)
+  : 0;
+
+// بازی‌های مورد علاقه در سال جاری
+const favoriteGames = yearGames.filter((g) => g.data.tags?.includes("favorite"));
+
+// اولین و آخرین بازی بر اساس تاریخ اتمام
+const sortedByDate = [...yearGames].sort(
+  (a, b) => a.data.date_finished.getTime() - b.data.date_finished.getTime()
+);
+const firstGame = sortedByDate[0];
+const lastGame = sortedByDate[sortedByDate.length - 1];
+
+// بهترین و بدترین بازی بر اساس امتیاز
+const bestGame = [...yearGames].sort((a, b) => b.data.personal_rating - a.data.personal_rating)[0];
+const worstGame = [...yearGames].sort((a, b) => a.data.personal_rating - b.data.personal_rating)[0];
+
+// پلتفرم محبوب
+const platformCounts = {};
+yearGames.forEach((game) => {
+  game.data.platforms?.forEach((platform) => {
+    platformCounts[platform] = (platformCounts[platform] ?? 0) + 1;
+  });
+});
+const topPlatformEntry = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0];
+const topPlatform = topPlatformEntry ? { name: topPlatformEntry[0], count: topPlatformEntry[1] } : null;
+
+// ژانر محبوب
+const genreCounts = {};
+yearGames.forEach((game) => {
+  game.data.genres?.forEach((genre) => {
+    genreCounts[genre] = (genreCounts[genre] ?? 0) + 1;
+  });
+});
+const topGenreEntry = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0];
+const topGenre = topGenreEntry ? { name: topGenreEntry[0], count: topGenreEntry[1] } : null;
+
+// فعال‌ترین ماه
+const monthCounts = {};
+yearGames.forEach((game) => {
+  const month = game.data.date_finished.getMonth();
+  monthCounts[month] = (monthCounts[month] ?? 0) + 1;
+});
+const topMonthEntry = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0];
+const monthNames = [
+  "ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن",
+  "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"
+];
+const topMonth = topMonthEntry ? { name: monthNames[Number(topMonthEntry[0])], count: topMonthEntry[1] } : null;
+
+// نرخ تکمیل نسبت به کل بازی‌های موجود (اختیاری)
+const totalAllGames = games.length;
+const completionRate = totalAllGames > 0 ? ((totalGames / totalAllGames) * 100).toFixed(1) : 0;
+---
+
+<BaseLayout title={`Replay ${currentYear}`}>
+  <h1>📅 Replay {currentYear}</h1>
+
+  {!hasData ? (
+    <p>هیچ بازی‌ای در سال {currentYear} به پایان نرسیده است.</p>
+  ) : (
+    <>
+      <!-- کارت‌های آماری اصلی -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">{totalGames}</div>
+          <div class="stat-label">بازی تکمیل شده</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{averageRating}</div>
+          <div class="stat-label">میانگین امتیاز</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{favoriteGames.length}</div>
+          <div class="stat-label">بازی‌های مورد علاقه</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{completionRate}%</div>
+          <div class="stat-label">نرخ تکمیل آرشیو</div>
+        </div>
+      </div>
+
+      <!-- جزئیات بیشتر -->
+      <div class="details-grid">
+        {firstGame && (
+          <div class="detail-item">
+            <span class="detail-icon">🎬</span>
+            <div>
+              <div class="detail-label">اولین بازی سال</div>
+              <div class="detail-value">{firstGame.data.title}</div>
+            </div>
+          </div>
+        )}
+        {lastGame && (
+          <div class="detail-item">
+            <span class="detail-icon">🏁</span>
+            <div>
+              <div class="detail-label">آخرین بازی سال</div>
+              <div class="detail-value">{lastGame.data.title}</div>
+            </div>
+          </div>
+        )}
+        {bestGame && (
+          <div class="detail-item">
+            <span class="detail-icon">🏆</span>
+            <div>
+              <div class="detail-label">بهترین بازی</div>
+              <div class="detail-value">
+                {bestGame.data.title} ({bestGame.data.personal_rating})
+              </div>
+            </div>
+          </div>
+        )}
+        {worstGame && (
+          <div class="detail-item">
+            <span class="detail-icon">💀</span>
+            <div>
+              <div class="detail-label">ضعیف‌ترین بازی</div>
+              <div class="detail-value">
+                {worstGame.data.title} ({worstGame.data.personal_rating})
+              </div>
+            </div>
+          </div>
+        )}
+        {topPlatform && (
+          <div class="detail-item">
+            <span class="detail-icon">🎮</span>
+            <div>
+              <div class="detail-label">محبوب‌ترین پلتفرم</div>
+              <div class="detail-value">
+                {topPlatform.name} ({topPlatform.count} بازی)
+              </div>
+            </div>
+          </div>
+        )}
+        {topGenre && (
+          <div class="detail-item">
+            <span class="detail-icon">🔥</span>
+            <div>
+              <div class="detail-label">محبوب‌ترین ژانر</div>
+              <div class="detail-value">
+                {topGenre.name} ({topGenre.count} بازی)
+              </div>
+            </div>
+          </div>
+        )}
+        {topMonth && (
+          <div class="detail-item">
+            <span class="detail-icon">📅</span>
+            <div>
+              <div class="detail-label">فعال‌ترین ماه</div>
+              <div class="detail-value">
+                {topMonth.name} ({topMonth.count} بازی)
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <!-- هایلایت بهترین بازی با کاور -->
+      {bestGame && bestGame.data.cover && (
+        <div class="highlight-game">
+          <img src={`/covers/${bestGame.data.cover}`} alt={bestGame.data.title} />
+          <div>
+            <h2>⭐ بهترین بازی سال</h2>
+            <p>{bestGame.data.title}</p>
+            <p>امتیاز: {bestGame.data.personal_rating}</p>
+          </div>
+        </div>
+      )}
+
+      <!-- لیست بازی‌های مورد علاقه -->
+      {favoriteGames.length > 0 && (
+        <>
+          <h2>❤️ بازی‌های مورد علاقه من در {currentYear}</h2>
+          <ul class="favorite-list">
+            {favoriteGames.map((game) => (
+              <li>
+                <a href={`/games/${game.id}`}>{game.data.title}</a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  )}
+</BaseLayout>
+
+<style>
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: linear-gradient(135deg, #1a1a1a, #0f0f0f);
+    border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .stat-card:hover {
+    transform: translateY(-4px);
+    border-color: #3b82f6;
+  }
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #8b5cf6;
+    margin-bottom: 0.5rem;
+  }
+  .stat-label {
+    font-size: 0.9rem;
+    opacity: 0.7;
+  }
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 16px;
+    padding: 1rem;
+  }
+  .detail-icon {
+    font-size: 1.8rem;
+  }
+  .detail-label {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    text-transform: uppercase;
+  }
+  .detail-value {
+    font-weight: 600;
+  }
+  .highlight-game {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    background: linear-gradient(90deg, #1e1a2f, #0f0f0f);
+    border-radius: 24px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+  }
+  .highlight-game img {
+    width: 140px;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  }
+  .highlight-game h2 {
+    margin: 0 0 0.5rem;
+  }
+  .favorite-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+  }
+  .favorite-list li {
+    background: #0a0a0a;
+    border: 1px solid #2a2a2a;
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    text-align: center;
+  }
+  .favorite-list a {
+    text-decoration: none;
+    color: inherit;
+  }
+  .favorite-list a:hover {
+    color: #8b5cf6;
+  }
+  h1 {
+    font-size: 2.2rem;
+    margin-bottom: 1.5rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin: 1.5rem 0 1rem;
+  }
+</style>

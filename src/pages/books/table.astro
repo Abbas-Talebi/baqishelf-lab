@@ -1,0 +1,50 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import BookTable from "../../components/BookTable.astro";
+
+const books =
+  await getCollection("books");
+---
+
+<BaseLayout title="جدول کتاب‌ها">
+
+<h1>کتاب‌ها</h1>
+
+<div class="view-switch">
+
+  <a href="/books">
+    نمای کارت
+  </a>
+
+  <a href="/books/table">
+    نمای جدول
+  </a>
+
+</div>
+
+<p>
+  تعداد کتاب‌ها:
+  {books.length}
+</p>
+
+<BookTable books={books} />
+
+<style>
+
+.view-switch {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.view-switch a {
+  border: 1px solid #333;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+</style>
+
+</BaseLayout>

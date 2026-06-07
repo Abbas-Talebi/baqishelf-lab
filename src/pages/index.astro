@@ -1,0 +1,1286 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import GenreChart from "../components/GenreChart.jsx";
+import MediaChart
+  from "../components/MediaChart.jsx";
+  import RatingChart
+  from "../components/RatingChart.jsx";
+  import TimelineChart
+  from "../components/TimelineChart.jsx";
+  
+const games = await getCollection("games");
+const movies = await getCollection("movies");
+const series = await getCollection("series");
+const books = await getCollection("books");
+const music = await getCollection("music");
+
+const totalItems =
+  games.length +
+  movies.length +
+  series.length +
+  books.length +
+  music.length;
+
+const allRatings = [
+  ...games.map((item) => item.data.personal_rating),
+  ...movies.map((item) => item.data.personal_rating),
+  ...series.map((item) => item.data.personal_rating),
+  ...books.map((item) => item.data.personal_rating),
+  ...music.map((item) => item.data.personal_rating),
+];
+
+const ratingDistribution = {
+  1:0,
+  2:0,
+  3:0,
+  4:0,
+  5:0,
+};
+
+allRatings.forEach((rating) => {
+
+  const rounded =
+    Math.round(rating);
+
+  if (
+    ratingDistribution[rounded]
+      !== undefined
+  ) {
+    ratingDistribution[rounded]++;
+  }
+
+});
+
+const ratingLabels =
+  Object.keys(
+    ratingDistribution
+  );
+
+const ratingValues =
+  Object.values(
+    ratingDistribution
+  );
+
+const averageRating =
+  allRatings.length > 0
+    ? (
+        allRatings.reduce(
+          (sum, rating) => sum + rating,
+          0
+        ) / allRatings.length
+      ).toFixed(1)
+    : "0.0";
+
+const mediaCounts = [
+  {
+    label: "🎮 بازی",
+    count: games.length,
+  },
+  {
+    label: "🎬 فیلم",
+    count: movies.length,
+  },
+  {
+    label: "📺 سریال",
+    count: series.length,
+  },
+  {
+    label: "📚 کتاب",
+    count: books.length,
+  },
+  {
+    label: "🎵 موسیقی",
+    count: music.length,
+  },
+];
+
+  
+const topMedia =
+  [...mediaCounts]
+    .sort((a, b) => b.count - a.count)[0];
+  
+  const recentEntries = [
+
+  ...games
+    .filter((item) => item.data.date_finished)
+    .map((item) => ({
+      type: "game",
+      title: item.data.title,
+      date: item.data.date_finished,
+      slug: `/games/${item.id}`,
+    })),
+
+  ...movies
+    .filter((item) => item.data.date_watched)
+    .map((item) => ({
+      type: "movie",
+      title: item.data.title,
+      date: item.data.date_watched,
+      slug: `/movies/${item.id}`,
+    })),
+
+  ...series
+    .filter((item) => item.data.date_finished)
+    .map((item) => ({
+      type: "series",
+      title: item.data.title,
+      date: item.data.date_finished,
+      slug: `/series/${item.id}`,
+    })),
+
+  ...books
+    .filter((item) => item.data.date_finished)
+    .map((item) => ({
+      type: "book",
+      title: item.data.title,
+      date: item.data.date_finished,
+      slug: `/books/${item.id}`,
+    })),
+
+  ...music
+    .filter((item) => item.data.date_listened)
+    .map((item) => ({
+      type: "music",
+      title: item.data.title,
+      date: item.data.date_listened,
+      slug: `/music/${item.id}`,
+    })),
+
+]
+.sort(
+  (a, b) =>
+    b.date.getTime() -
+    a.date.getTime()
+)
+.slice(0, 10);
+
+const timeline = {};
+
+[
+  ...games,
+  ...movies,
+  ...series,
+  ...books,
+  ...music,
+].forEach((item) => {
+
+  const date =
+    item.data.date_finished ??
+    item.data.date_watched ??
+    item.data.date_listened;
+
+  if (!date) return;
+
+  const year =
+    date.getFullYear();
+
+  timeline[year] =
+    (timeline[year] ?? 0) + 1;
+});
+
+const sortedTimeline =
+  Object.entries(timeline)
+    .sort(
+      ([a], [b]) =>
+        Number(a) -
+        Number(b)
+    );
+
+const timelineLabels =
+  Object.keys(timeline);
+
+const timelineValues =
+  Object.values(timeline);
+
+const favorites = [
+
+  ...games
+    .filter(
+      (item) =>
+        item.data.tags?.includes(
+          "favorite"
+        )
+    )
+    .map((item) => ({
+      title: item.data.title,
+      cover: item.data.cover,
+      slug: `/games/${item.id}`,
+      type: "🎮",
+    })),
+
+  ...movies
+    .filter(
+      (item) =>
+        item.data.tags?.includes(
+          "favorite"
+        )
+    )
+    .map((item) => ({
+      title: item.data.title,
+      cover: item.data.cover,
+      slug: `/movies/${item.id}`,
+      type: "🎬",
+    })),
+
+  ...series
+    .filter(
+      (item) =>
+        item.data.tags?.includes(
+          "favorite"
+        )
+    )
+    .map((item) => ({
+      title: item.data.title,
+      cover: item.data.cover,
+      slug: `/series/${item.id}`,
+      type: "📺",
+    })),
+
+  ...books
+    .filter(
+      (item) =>
+        item.data.tags?.includes(
+          "favorite"
+        )
+    )
+    .map((item) => ({
+      title: item.data.title,
+      cover: item.data.cover,
+      slug: `/books/${item.id}`,
+      type: "📚",
+    })),
+
+  ...music
+    .filter(
+      (item) =>
+        item.data.tags?.includes(
+          "favorite"
+        )
+    )
+    .map((item) => ({
+      title: item.data.title,
+      cover: item.data.cover,
+      slug: `/music/${item.id}`,
+      type: "🎵",
+    })),
+
+];
+
+const topRated = [
+
+  ...games.map((item) => ({
+    title: item.data.title,
+    rating: item.data.personal_rating,
+    slug: `/games/${item.id}`,
+    type: "🎮",
+  })),
+
+  ...movies.map((item) => ({
+    title: item.data.title,
+    rating: item.data.personal_rating,
+    slug: `/movies/${item.id}`,
+    type: "🎬",
+  })),
+
+  ...series.map((item) => ({
+    title: item.data.title,
+    rating: item.data.personal_rating,
+    slug: `/series/${item.id}`,
+    type: "📺",
+  })),
+
+  ...books.map((item) => ({
+    title: item.data.title,
+    rating: item.data.personal_rating,
+    slug: `/books/${item.id}`,
+    type: "📚",
+  })),
+
+  ...music.map((item) => ({
+    title: item.data.title,
+    rating: item.data.personal_rating,
+    slug: `/music/${item.id}`,
+    type: "🎵",
+  })),
+
+]
+.sort((a, b) => b.rating - a.rating)
+.slice(0, 10);
+
+const completedGames =
+  games.filter(
+    (game) =>
+      game.data.completion_percentage
+  );
+
+const averageCompletion =
+  completedGames.length > 0
+    ? Math.round(
+        completedGames.reduce(
+          (sum, game) =>
+            sum +
+            game.data
+              .completion_percentage,
+          0
+        ) /
+          completedGames.length
+      )
+    : 0;
+
+const totalAchievementsUnlocked =
+  games.reduce(
+    (sum, game) =>
+      sum +
+      (game.data
+        .achievements_unlocked ??
+        0),
+    0
+  );
+  
+  const totalPages =
+  books.reduce(
+    (sum, book) =>
+      sum + (book.data.pages ?? 0),
+    0
+  );
+
+const totalAchievements =
+  games.reduce(
+    (sum, game) =>
+      sum +
+      (game.data
+        .achievements_total ??
+        0),
+    0
+  );
+  
+  const genreCounts = {};
+
+[
+  ...games,
+  ...movies,
+  ...series,
+  ...books,
+  ...music,
+].forEach((item) => {
+
+  item.data.genres?.forEach(
+    (genre) => {
+
+      genreCounts[genre] =
+        (genreCounts[genre] ?? 0)
+        + 1;
+
+    }
+  );
+
+});
+
+const topGenres =
+  Object.entries(genreCounts)
+    .sort(
+      (a, b) =>
+        b[1] - a[1]
+    )
+    .slice(0, 10);
+	
+	const genreLabels =
+  topGenres.map(
+    ([genre]) => genre
+  );
+
+const genreValues =
+  topGenres.map(
+    ([, count]) => count
+  );
+---
+
+<BaseLayout title="آرشیو شخصی باقی">
+
+<section class="hero">
+
+  <h1>BaqiShelf</h1>
+
+  <p class="hero-text">
+    کتابخانه شخصی من برای ثبت
+    بازی‌ها، فیلم‌ها، سریال‌ها،
+    کتاب‌ها و موسیقی.
+  </p>
+
+</section>
+
+<section>
+
+  <h2>آخرین آثار ثبت‌شده</h2>
+
+  <div class="recent-list">
+
+    {
+      recentEntries.map((item) => (
+
+        <a
+          href={item.slug}
+          class="recent-item"
+        >
+
+          <span>
+
+            {
+              item.type === "game"
+                ? "🎮"
+                : item.type === "movie"
+                ? "🎬"
+                : item.type === "series"
+                ? "📺"
+                : item.type === "book"
+                ? "📚"
+                : "🎵"
+            }
+
+          </span>
+
+          <span>
+            {item.title}
+          </span>
+
+          <span class="date">
+            {
+              item.date.toLocaleDateString(
+                "fa-IR"
+              )
+            }
+          </span>
+
+        </a>
+
+      ))
+    }
+
+  </div>
+
+</section>
+
+<section>
+
+  <h2>
+    ★ آثار محبوب
+  </h2>
+
+  <div class="favorites-grid">
+
+    {
+      favorites.map((item) => (
+
+        <a
+          href={item.slug}
+          class="favorite-card"
+        >
+
+          {
+            item.cover && (
+              <img
+                src={`/covers/${item.cover}`}
+                alt={item.title}
+              />
+            )
+          }
+
+          <div class="favorite-info">
+
+            <span>
+              {item.type}
+            </span>
+
+            <strong>
+              {item.title}
+            </strong>
+
+          </div>
+
+        </a>
+
+      ))
+    }
+
+  </div>
+
+</section>
+
+<section>
+
+<h2>
+🏆 بهترین آثار
+</h2>
+
+<div class="top-rated-list">
+
+{
+  topRated.map((item) => (
+
+    <a
+      href={item.slug}
+      class="top-rated-item"
+    >
+
+      <span>
+        {item.type}
+      </span>
+
+      <span>
+        {item.title}
+      </span>
+
+      <strong>
+        {item.rating}/5
+      </strong>
+
+    </a>
+
+  ))
+}
+
+</div>
+
+</section>
+
+<section>
+
+  <h2 class="section-title">
+    🎮 داشبورد بازی‌ها
+  </h2>
+
+  <div class="game-dashboard">
+
+    <div class="dashboard-card">
+
+      <div class="card-header">
+        <span class="icon">🏁</span>
+
+        <span>
+          میانگین Completion
+        </span>
+      </div>
+
+      <div class="big-number">
+        {averageCompletion}%
+      </div>
+
+      <div class="progress-bar">
+
+        <div
+          class="progress-fill"
+          style={`width:${averageCompletion}%`}
+        ></div>
+
+      </div>
+
+    </div>
+
+    <div class="dashboard-card">
+
+      <div class="card-header">
+
+        <span class="icon">🏆</span>
+
+        <span>
+          اچیومنت‌ها
+        </span>
+
+      </div>
+
+      <div class="big-number">
+
+        {totalAchievementsUnlocked}
+
+        <span class="separator">
+          /
+        </span>
+
+        {totalAchievements}
+
+      </div>
+
+      <div class="progress-bar">
+
+        <div
+          class="achievement-fill"
+          style={`width:${
+            totalAchievements > 0
+              ? (
+                  totalAchievementsUnlocked /
+                  totalAchievements
+                ) * 100
+              : 0
+          }%`}
+        ></div>
+
+      </div>
+
+      <div class="progress-text">
+
+        {
+          totalAchievements > 0
+            ? Math.round(
+                (
+                  totalAchievementsUnlocked /
+                  totalAchievements
+                ) * 100
+              )
+            : 0
+        }
+        %
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+<section>
+
+  <div class="section-header">
+
+    <h2>
+      🎭 ژانرهای محبوب
+    </h2>
+
+    <span class="section-subtitle">
+      پرمصرف‌ترین ژانرهای آرشیو
+    </span>
+
+  </div>
+
+  <div class="genre-grid">
+
+    {
+      topGenres.map(
+        ([genre, count], index) => (
+
+          <div
+            class="genre-card"
+          >
+
+            <div
+              class="genre-rank"
+            >
+              #{index + 1}
+            </div>
+
+            <h3>
+              {genre}
+            </h3>
+
+            <div
+              class="genre-count"
+            >
+              {count}
+            </div>
+
+            <span
+              class="genre-label"
+            >
+              اثر ثبت شده
+            </span>
+
+          </div>
+
+        )
+      )
+    }
+
+  </div>
+
+</section>
+
+<section>
+
+  <h2>
+    📊 توزیع ژانرها
+  </h2>
+
+  <GenreChart
+    client:load
+    labels={genreLabels}
+    values={genreValues}
+  />
+
+</section>
+
+<section>
+
+<h2>
+⭐ توزیع امتیازها
+</h2>
+
+<RatingChart
+  client:load
+  labels={ratingLabels}
+  values={ratingValues}
+/>
+
+</section>
+
+<section class="stats-grid">
+
+  <div class="stat-card">
+    <h3>مجموع آثار</h3>
+    <p>{totalItems}</p>
+  </div>
+
+  <div class="stat-card">
+    <h3>میانگین امتیاز</h3>
+    <p>{averageRating} / 5</p>
+  </div>
+
+  <div class="stat-card">
+    <h3>بزرگ‌ترین آرشیو</h3>
+    <p>{topMedia.label}</p>
+  </div>
+
+</section>
+
+<section>
+
+<h2>
+📚 داشبورد کتاب‌ها
+</h2>
+
+<div class="dashboard-grid">
+
+<div>
+
+<h3>
+مجموع صفحات
+</h3>
+
+<p>
+{totalPages}
+</p>
+
+</div>
+
+<div>
+
+<h3>
+کتاب‌ها
+</h3>
+
+<p>
+{books.length}
+</p>
+
+</div>
+
+</div>
+
+</section>
+
+<section>
+
+  <h2>آمار مدیوم‌ها</h2>
+
+  <div class="media-grid">
+
+    <div>🎮 {games.length} بازی</div>
+
+    <div>🎬 {movies.length} فیلم</div>
+
+    <div>📺 {series.length} سریال</div>
+
+    <div>📚 {books.length} کتاب</div>
+
+    <div>🎵 {music.length} موسیقی</div>
+
+  </div>
+
+</section>
+
+<section>
+
+<h2>
+📅 تاریخچه فعالیت
+</h2>
+
+<TimelineChart
+  client:load
+  labels={timelineLabels}
+  values={timelineValues}
+/>
+
+</section>
+
+<section>
+
+<h2>
+📊 ترکیب آرشیو
+</h2>
+
+<MediaChart
+  client:load
+  labels={[
+    "Games",
+    "Movies",
+    "Series",
+    "Books",
+    "Music",
+  ]}
+  values={[
+    games.length,
+    movies.length,
+    series.length,
+    books.length,
+    music.length,
+  ]}
+/>
+
+</section>
+
+</BaseLayout>
+</BaseLayout>
+
+<style>
+
+.hero {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.hero-text {
+  font-size: 1.1rem;
+  opacity: 0.8;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.stats-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(220px, 1fr)
+    );
+
+  gap: 1rem;
+
+  margin-bottom: 3rem;
+}
+
+.stat-card {
+  border: 1px solid #333;
+
+  border-radius: 12px;
+
+  padding: 1.25rem;
+
+  text-align: center;
+}
+
+.stat-card h3 {
+  margin-top: 0;
+}
+
+.stat-card p {
+  font-size: 1.5rem;
+  margin-bottom: 0;
+}
+
+.media-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(180px, 1fr)
+    );
+
+  gap: 1rem;
+}
+
+.media-grid div {
+  border: 1px solid #333;
+
+  border-radius: 12px;
+
+  padding: 1rem;
+
+  text-align: center;
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  border: 1px solid #333;
+
+  border-radius: 10px;
+
+  padding: 0.9rem 1rem;
+
+  text-decoration: none;
+
+  color: inherit;
+}
+
+.recent-item:hover {
+  transform: translateY(-2px);
+}
+
+.date {
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.favorites-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(180px, 1fr)
+    );
+
+  gap: 1rem;
+
+  margin-top: 1rem;
+}
+
+.favorite-card {
+  border: 1px solid #333;
+
+  border-radius: 12px;
+
+  overflow: hidden;
+
+  text-decoration: none;
+
+  color: inherit;
+}
+
+.favorite-card img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+
+  object-fit: cover;
+}
+
+.favorite-info {
+  padding: 0.75rem;
+}
+
+.dashboard-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(220px, 1fr)
+    );
+
+  gap: 1rem;
+}
+
+.dashboard-grid > div {
+  border: 1px solid #333;
+
+  border-radius: 12px;
+
+  padding: 1rem;
+}
+
+.top-rated-list {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.top-rated-item {
+  display: flex;
+  justify-content: space-between;
+
+  border: 1px solid #333;
+
+  border-radius: 10px;
+
+  padding: .9rem 1rem;
+
+  text-decoration: none;
+
+  color: inherit;
+}
+
+.achievement-bar {
+  width: 100%;
+  height: 12px;
+
+  background: #222;
+
+  border-radius: 999px;
+
+  overflow: hidden;
+
+  margin-top: .75rem;
+}
+
+.achievement-fill {
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #10b981,
+      #34d399
+    );
+}
+
+.section-title {
+  margin-bottom: 1rem;
+}
+
+.game-dashboard {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(280px, 1fr)
+    );
+
+  gap: 1.25rem;
+}
+
+.dashboard-card {
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.03),
+      rgba(255,255,255,.01)
+    );
+
+  border: 1px solid #2f2f2f;
+
+  border-radius: 18px;
+
+  padding: 1.25rem;
+
+  backdrop-filter: blur(8px);
+
+  transition: all .25s ease;
+}
+
+.dashboard-card:hover {
+
+  transform:
+    translateY(-3px);
+
+  border-color: #4a4a4a;
+}
+
+.card-header {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: .75rem;
+
+  margin-bottom: 1rem;
+
+  opacity: .85;
+}
+
+.icon {
+  font-size: 1.2rem;
+}
+
+.big-number {
+
+  font-size: 2rem;
+
+  font-weight: 700;
+
+  margin-bottom: 1rem;
+}
+
+.separator {
+  opacity: .4;
+}
+
+.progress-bar {
+
+  width: 100%;
+
+  height: 12px;
+
+  background: #1d1d1d;
+
+  border-radius: 999px;
+
+  overflow: hidden;
+}
+
+.progress-fill {
+
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #3b82f6,
+      #60a5fa
+    );
+}
+
+.achievement-fill {
+
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #10b981,
+      #34d399
+    );
+}
+
+.progress-text {
+
+  text-align: center;
+
+  margin-top: .75rem;
+
+  opacity: .75;
+
+  font-size: .9rem;
+}
+
+.section-header {
+
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items: center;
+
+  margin-bottom: 1rem;
+
+  flex-wrap: wrap;
+}
+
+.section-subtitle {
+
+  opacity: .6;
+
+  font-size: .9rem;
+}
+
+.genre-grid {
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(180px,1fr)
+    );
+
+  gap: 1rem;
+}
+
+.genre-card {
+
+  position: relative;
+
+  border: 1px solid #2f2f2f;
+
+  border-radius: 18px;
+
+  padding: 1.25rem;
+
+  text-align: center;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,255,255,.04),
+      rgba(255,255,255,.01)
+    );
+
+  transition:
+    transform .25s ease,
+    border-color .25s ease;
+}
+
+.genre-card:hover {
+
+  transform:
+    translateY(-4px);
+
+  border-color: #555;
+}
+
+.genre-rank {
+
+  position: absolute;
+
+  top: .75rem;
+
+  left: .75rem;
+
+  font-size: .8rem;
+
+  opacity: .5;
+}
+
+.genre-card h3 {
+
+  margin-top: .5rem;
+
+  margin-bottom: .75rem;
+
+  font-size: 1.1rem;
+}
+
+.genre-count {
+
+  font-size: 2rem;
+
+  font-weight: 700;
+
+  line-height: 1;
+}
+
+.genre-label {
+
+  display: block;
+
+  margin-top: .5rem;
+
+  opacity: .6;
+
+  font-size: .85rem;
+}
+
+</style>

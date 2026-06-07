@@ -1,0 +1,165 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Rating from "../../components/Rating.astro";
+import { getCollection, render } from "astro:content";
+
+const statusMap = {
+  watched: "✓ تماشا شده",
+  watching: "🎬 در حال تماشا",
+  planned: "📋 برنامه تماشا",
+  dropped: "✕ رها شده",
+};
+
+export async function getStaticPaths() {
+  const series = await getCollection("series");
+
+ return series.map((item) => ({
+  params: {
+    slug: item.id,
+  },
+  props: {
+    series: item,
+  },
+}));
+}
+
+const { series } = Astro.props;
+
+const { Content } = await render(series);
+
+const genres = series.data.genres ?? [];
+const tags = series.data.tags ?? [];
+---
+
+<BaseLayout title={series.data.title}>
+
+  <div class="series-header">
+
+    {
+      series.data.cover && (
+        <img
+          src={`/covers/${series.data.cover}`}
+          alt={series.data.title}
+          class="series-cover"
+        />
+      )
+    }
+
+    <div class="series-info">
+
+      <h1>{series.data.title}</h1>
+
+      <div>
+        <strong>امتیاز شخصی:</strong>
+        <Rating value={series.data.personal_rating} />
+      </div>
+
+      <p>
+        <strong>سال انتشار:</strong>
+        {series.data.year}
+      </p>
+
+      <p>
+        <strong>وضعیت:</strong>
+        {statusMap[series.data.status]}
+      </p>
+
+      {
+  series.data.date_finished && (
+          <p>
+            <strong>تاریخ تماشا:</strong>
+            {series.data.date_watched.toLocaleDateString("fa-IR")}
+            {" | "}
+            {series.data.date_watched.toLocaleDateString("en-GB")}
+          </p>
+        )
+      }
+
+      {
+        series.data.director && (
+          <p>
+            <strong>کارگردان:</strong>
+            {series.data.director}
+          </p>
+        )
+      }
+
+    </div>
+
+  </div>
+
+  <div>
+    <strong>ژانرها:</strong>
+
+    <div class="badges">
+      {
+        genres.map((genre) => (
+          <span class="badge">
+            {genre}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+
+  <div>
+    <strong>تگ‌ها:</strong>
+
+    <div class="badges">
+      {
+        tags.map((tag) => (
+          <span class="badge">
+            {tag}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+
+  <p>{series.data.summary}</p>
+
+  <hr />
+
+  <Content />
+
+  <hr />
+
+  <style>
+    .series-header {
+      display: flex;
+      gap: 2rem;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+    }
+
+    .series-info {
+      flex: 1;
+    }
+
+    .series-info h1 {
+      margin-top: 0;
+    }
+
+    .series-cover {
+      width: 240px;
+      max-width: 100%;
+      border-radius: 12px;
+    }
+
+    .badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .badge {
+      border: 1px solid #333;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+    }
+  </style>
+
+</BaseLayout>

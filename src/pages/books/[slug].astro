@@ -1,0 +1,193 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Rating from "../../components/Rating.astro";
+import { getCollection, render } from "astro:content";
+
+const statusMap = {
+  completed: "✓ خوانده شده",
+  reading: "📖 در حال مطالعه",
+  planned: "📚 در صف مطالعه",
+  dropped: "✕ رها شده",
+};
+
+export async function getStaticPaths() {
+  const books = await getCollection("books");
+
+  return books.map((book) => ({
+    params: {
+      slug: book.id,
+    },
+    props: {
+      book,
+    },
+  }));
+}
+
+const { book } = Astro.props;
+
+const { Content } = await render(book);
+
+const genres = book.data.genres ?? [];
+const tags = book.data.tags ?? [];
+---
+
+<BaseLayout title={book.data.title}>
+
+<div class="book-header">
+
+  {
+    book.data.cover && (
+      <img
+        src={`/covers/${book.data.cover}`}
+        alt={book.data.title}
+        class="book-cover"
+      />
+    )
+  }
+
+  <div class="book-info">
+
+    <h1>{book.data.title}</h1>
+
+    <div>
+      <strong>امتیاز شخصی:</strong>
+      <Rating value={book.data.personal_rating} />
+    </div>
+
+    <p>
+      <strong>سال انتشار:</strong>
+      {book.data.year}
+    </p>
+
+    <p>
+      <strong>وضعیت:</strong>
+      {
+        statusMap[book.data.status]
+        ?? book.data.status
+      }
+    </p>
+
+    {
+      book.data.author && (
+        <p>
+          <strong>نویسنده:</strong>
+          {book.data.author}
+        </p>
+      )
+    }
+
+    {
+      book.data.pages && (
+        <p>
+          <strong>تعداد صفحات:</strong>
+          {book.data.pages}
+        </p>
+      )
+    }
+
+    {
+      book.data.date_finished && (
+        <p>
+          <strong>تاریخ اتمام:</strong>
+          {" "}
+          {book.data.date_finished.toLocaleDateString("fa-IR")}
+          {" | "}
+          {book.data.date_finished.toLocaleDateString("en-GB")}
+        </p>
+      )
+    }
+
+  </div>
+
+</div>
+
+<div>
+  <strong>ژانرها:</strong>
+
+  <div class="badges">
+
+    {
+      genres.map((genre) => (
+
+        <a
+          href={`/genres/${genre
+            .toLowerCase()
+            .replaceAll(" ", "-")}`}
+          class="badge"
+        >
+          {genre}
+        </a>
+
+      ))
+    }
+
+  </div>
+</div>
+
+<div>
+  <strong>تگ‌ها:</strong>
+
+  <div class="badges">
+
+    {
+      tags.map((tag) => (
+        <span class="badge">
+          {tag}
+        </span>
+      ))
+    }
+
+  </div>
+</div>
+
+{
+  book.data.summary && (
+    <p>{book.data.summary}</p>
+  )
+}
+
+<hr />
+
+<Content />
+
+<style>
+
+.book-header {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.book-cover {
+  width: 240px;
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+.book-info {
+  flex: 1;
+}
+
+.book-info h1 {
+  margin-top: 0;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.badge {
+  border: 1px solid #333;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+</style>
+
+</BaseLayout>

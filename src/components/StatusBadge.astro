@@ -1,0 +1,25 @@
+---
+const { status } = Astro.props;
+
+const labels = {
+  completed: "✓ تکمیل شده",
+  playing: "🎮 در حال تجربه",
+  paused: "⏸ متوقف شده",
+  backlog: "📚 در صف",
+  dropped: "✕ رها شده",
+};
+---
+
+<span class="status">
+  {labels[status] ?? status}
+</span>
+
+<style>
+.status {
+  border: 1px solid #333;
+
+  border-radius: 999px;
+
+  padding: 0.25rem 0.75rem;
+}
+</style>

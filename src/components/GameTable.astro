@@ -1,0 +1,146 @@
+---
+import Rating from "./Rating.astro";
+
+const { games } = Astro.props;
+
+const statusMap = {
+  completed: "✓ تکمیل شده",
+  playing: "🎮 در حال تجربه",
+  backlog: "📚 در صف",
+  paused: "⏸ متوقف شده",
+  dropped: "✕ رها شده",
+};
+---
+
+<table class="game-table">
+  <thead>
+    <tr>
+      <th>کاور</th>
+      <th data-sort="string">عنوان ↕</th>
+      <th data-sort="number">امتیاز ↕</th>
+      <th data-sort="number">سال ↕</th>
+      <th data-sort="string">پلتفرم ↕</th>
+      <th data-sort="string">ژانر ↕</th>
+      <th>وضعیت</th>
+      <th data-sort="date">تاریخ اتمام ↕</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      games.map((game) => (
+        <tr>
+          <td>
+            {
+              game.data.cover && (
+                <img
+                  src={`/covers/${game.data.cover}`}
+                  alt={game.data.title}
+                  class="cover"
+                />
+              )
+            }
+          </td>
+          <td data-value={game.data.title}>
+            <a href={`/games/${game.id}`}>
+              {game.data.title}
+            </a>
+          </td>
+          <td data-value={game.data.personal_rating}>
+            <Rating value={game.data.personal_rating} />
+          </td>
+          <td data-value={game.data.year}>
+            {game.data.year}
+          </td>
+          <td data-value={game.data.platforms?.join(", ") ?? ""}>
+            {game.data.platforms?.join(", ")}
+          </td>
+          <td data-value={game.data.genres?.join(", ") ?? ""}>
+            {game.data.genres?.join(", ")}
+          </td>
+          <td data-value={game.data.status}>
+            {statusMap[game.data.status]}
+          </td>
+          <td data-value={game.data.date_finished?.getTime() ?? 0}>
+            {game.data.date_finished?.toLocaleDateString("fa-IR")}
+          </td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const table = document.querySelector(".game-table");
+    if (!table) return;
+
+    const headers = table.querySelectorAll("th[data-sort]");
+
+    headers.forEach((header) => {
+      let ascending = true;
+      header.style.cursor = "pointer";
+
+      header.addEventListener("click", () => {
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        const columnIndex = header.cellIndex;
+        const sortType = header.dataset.sort;
+
+        rows.sort((a, b) => {
+          const aCell = a.children[columnIndex];
+          const bCell = b.children[columnIndex];
+          let aVal = aCell?.dataset?.value ?? "";
+          let bVal = bCell?.dataset?.value ?? "";
+
+          if (sortType === "number" || sortType === "date") {
+            aVal = Number(aVal);
+            bVal = Number(bVal);
+            return ascending ? aVal - bVal : bVal - aVal;
+          }
+
+          // sortType === "string"
+          return ascending
+            ? String(aVal).localeCompare(String(bVal))
+            : String(bVal).localeCompare(String(aVal));
+        });
+
+        ascending = !ascending;
+        tbody.replaceChildren(...rows);
+      });
+    });
+  });
+</script>
+
+<style>
+  .game-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .game-table th,
+  .game-table td {
+    padding: 0.75rem;
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .game-table th {
+    font-weight: bold;
+  }
+
+  .cover {
+    width: 60px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 6px;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .game-table td a {
+    text-decoration: none;
+  }
+</style>

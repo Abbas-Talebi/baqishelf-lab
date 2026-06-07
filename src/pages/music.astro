@@ -1,0 +1,77 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import MusicCard from "../components/MusicCard.astro";
+import SearchBar from "../components/SearchBar.astro";
+
+const music = await getCollection("music");
+
+const sortedMusic = [...music].sort(
+  (a, b) => b.data.personal_rating - a.data.personal_rating
+);
+---
+
+<BaseLayout title="موسیقی">
+  <h1>موسیقی</h1>
+
+  <SearchBar placeholder="جستجوی موسیقی..." />
+
+  <div class="view-switch">
+    <a href="/music">نمای کارت</a>
+    <a href="/music/table">نمای جدول</a>
+  </div>
+
+  <p>تعداد آثار: {music.length}</p>
+
+  <div id="music-list">
+    {sortedMusic.map((item) => (
+      <MusicCard music={item} />
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const searchInput = document.getElementById("media-search");
+    const musicContainer = document.getElementById("music-list");
+
+    if (!searchInput || !musicContainer) return;
+
+    const getCards = () => [...document.querySelectorAll("#music-list .card")];
+
+    const applyFilter = () => {
+      const query = searchInput.value.trim().toLowerCase();
+
+      getCards().forEach((card) => {
+        const title = card.dataset.title?.toLowerCase() ?? "";
+        if (query && !title.includes(query)) {
+          card.style.display = "none";
+        } else {
+          card.style.display = "";
+        }
+      });
+    };
+
+    searchInput.addEventListener("input", applyFilter);
+    applyFilter(); // اجرای اولیه
+  });
+</script>
+
+<style>
+  .view-switch {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .view-switch a {
+    border: 1px solid #333;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+  #music-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+</style>

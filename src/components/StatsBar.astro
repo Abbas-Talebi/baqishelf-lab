@@ -1,0 +1,49 @@
+---
+const {
+  total,
+  completed,
+  playing,
+  favorite
+} = Astro.props;
+---
+
+<div class="stats-bar">
+
+  <span>کل: {total}</span>
+
+  <span>
+    ✓ تکمیل‌شده:
+    {completed}
+  </span>
+
+  <span>
+    🎮 در حال تجربه:
+    {playing}
+  </span>
+
+  <span>
+    ★ Favorite:
+    {favorite}
+  </span>
+
+</div>
+
+<style>
+.stats-bar {
+  display: flex;
+
+  gap: 1rem;
+
+  flex-wrap: wrap;
+
+  margin-bottom: 2rem;
+}
+
+.stats-bar span {
+  border: 1px solid #333;
+
+  border-radius: 999px;
+
+  padding: 0.4rem 0.8rem;
+}
+</style>

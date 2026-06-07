@@ -1,0 +1,77 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import SeriesCard from "../components/SeriesCard.astro";
+import SearchBar from "../components/SearchBar.astro";
+
+const series = await getCollection("series");
+
+const sortedSeries = [...series].sort(
+  (a, b) => b.data.personal_rating - a.data.personal_rating
+);
+---
+
+<BaseLayout title="سریال‌ها">
+  <h1>سریال‌ها</h1>
+
+  <SearchBar placeholder="جستجوی سریال..." />
+
+  <div class="view-switch">
+    <a href="/series">نمای کارت</a>
+    <a href="/series/table">نمای جدول</a>
+  </div>
+
+  <p>تعداد سریال‌ها: {series.length}</p>
+
+  <div id="series-list">
+    {sortedSeries.map((item) => (
+      <SeriesCard series={item} />
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const searchInput = document.getElementById("media-search");
+    const seriesContainer = document.getElementById("series-list");
+
+    if (!searchInput || !seriesContainer) return;
+
+    const getCards = () => [...document.querySelectorAll("#series-list .card")];
+
+    const applyFilter = () => {
+      const query = searchInput.value.trim().toLowerCase();
+
+      getCards().forEach((card) => {
+        const title = card.dataset.title?.toLowerCase() ?? "";
+        if (query && !title.includes(query)) {
+          card.style.display = "none";
+        } else {
+          card.style.display = "";
+        }
+      });
+    };
+
+    searchInput.addEventListener("input", applyFilter);
+    applyFilter(); // اجرای اولیه
+  });
+</script>
+
+<style>
+  .view-switch {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .view-switch a {
+    border: 1px solid #333;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+  #series-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+</style>

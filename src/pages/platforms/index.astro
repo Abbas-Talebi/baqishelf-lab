@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+
+const games = await getCollection("games");
+
+const platforms = [
+  ...new Set(
+    games.flatMap(
+      (game) => game.data.platforms ?? []
+    )
+  ),
+].sort();
+---
+
+<BaseLayout title="پلتفرم‌ها">
+
+<h1>پلتفرم‌ها</h1>
+
+<div class="platform-grid">
+
+{
+  platforms.map((platform) => (
+    <a
+      href={`/platforms/${platform
+        .toLowerCase()
+        .replaceAll(" ", "-")}`}
+      class="platform-card"
+    >
+      {platform}
+    </a>
+  ))
+}
+
+</div>
+
+</BaseLayout>
+
+<style>
+.platform-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(220px, 1fr));
+
+  gap: 1rem;
+}
+
+.platform-card {
+  border: 1px solid #333;
+
+  border-radius: 12px;
+
+  padding: 1rem;
+
+  text-decoration: none;
+}
+</style>

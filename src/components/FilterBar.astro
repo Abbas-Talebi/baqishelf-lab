@@ -1,0 +1,46 @@
+<div class="filters">
+  <select id="status-filter">
+    <option value="">همه وضعیت‌ها</option>
+    <option value="completed">تکمیل شده</option>
+    <option value="playing">در حال تجربه</option>
+    <option value="backlog">در صف</option>
+    <option value="paused">متوقف شده</option>
+    <option value="dropped">رها شده</option>
+  </select>
+
+  <select id="tag-filter">
+    <option value="">همه تگ‌ها</option>
+    <option value="favorite">Favorite</option>
+    <option value="masterpiece">Masterpiece</option>
+    <option value="hidden-gem">Hidden Gem</option>
+  </select>
+
+  <select id="sort-filter">
+    <option value="rating-desc">امتیاز ↓</option>
+    <option value="rating-asc">امتیاز ↑</option>
+    <option value="year-desc">سال انتشار ↓</option>
+    <option value="year-asc">سال انتشار ↑</option>
+    <option value="finished-desc">تاریخ اتمام ↓</option>
+    <option value="finished-asc">تاریخ اتمام ↑</option>
+  </select>
+</div>
+
+<style>
+  .filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .filters select {
+    background: #111;
+    color: white;
+    border: 1px solid #333;
+    padding: 0.6rem;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .filters select:hover {
+    border-color: #666;
+  }
+</style>

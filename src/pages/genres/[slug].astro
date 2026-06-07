@@ -1,0 +1,62 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import GameCard from "../../components/GameCard.astro";
+
+const games = await getCollection("games");
+
+const genres = [
+  ...new Set(
+    games.flatMap(
+      (game) => game.data.genres ?? []
+    )
+  ),
+];
+
+export async function getStaticPaths() {
+  const games = await getCollection("games");
+
+  const genres = [
+    ...new Set(
+      games.flatMap(
+        (game) => game.data.genres ?? []
+      )
+    ),
+  ];
+
+  return genres.map((genre) => ({
+    params: {
+      slug: genre
+        .toLowerCase()
+        .replaceAll(" ", "-"),
+    },
+    props: {
+      genre,
+    },
+  }));
+}
+
+const { genre } = Astro.props;
+
+const genreGames = games.filter(
+  (game) =>
+    game.data.genres?.includes(genre)
+);
+---
+
+<BaseLayout title={genre}>
+
+<h1>{genre}</h1>
+
+<p>
+  تعداد:
+  {genreGames.length}
+</p>
+
+{
+  genreGames.map((game) => (
+    <GameCard game={game} />
+  ))
+}
+
+</BaseLayout>

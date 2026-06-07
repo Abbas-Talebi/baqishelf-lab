@@ -1,0 +1,77 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import BookCard from "../components/BookCard.astro";
+import SearchBar from "../components/SearchBar.astro";
+
+const books = await getCollection("books");
+
+const sortedBooks = [...books].sort(
+  (a, b) => b.data.personal_rating - a.data.personal_rating
+);
+---
+
+<BaseLayout title="کتاب‌ها">
+  <h1>کتاب‌ها</h1>
+
+  <SearchBar placeholder="جستجوی کتاب..." />
+
+  <div class="view-switch">
+    <a href="/books">نمای کارت</a>
+    <a href="/books/table">نمای جدول</a>
+  </div>
+
+  <p>تعداد کتاب‌ها: {books.length}</p>
+
+  <div id="books-list">
+    {sortedBooks.map((book) => (
+      <BookCard book={book} />
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const searchInput = document.getElementById("media-search");
+    const booksContainer = document.getElementById("books-list");
+
+    if (!searchInput || !booksContainer) return;
+
+    const getCards = () => [...document.querySelectorAll("#books-list .card")];
+
+    const applyFilter = () => {
+      const query = searchInput.value.trim().toLowerCase();
+
+      getCards().forEach((card) => {
+        const title = card.dataset.title?.toLowerCase() ?? "";
+        if (query && !title.includes(query)) {
+          card.style.display = "none";
+        } else {
+          card.style.display = "";
+        }
+      });
+    };
+
+    searchInput.addEventListener("input", applyFilter);
+    applyFilter(); // اجرای اولیه
+  });
+</script>
+
+<style>
+  .view-switch {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .view-switch a {
+    border: 1px solid #333;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+  #books-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+</style>

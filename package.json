@@ -1,0 +1,29 @@
+{
+  "name": "website",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+  "dev": "astro dev",
+  "build": "astro build",
+  "preview": "astro preview",
+  "astro": "astro",
+
+  "optimize-cover": "node scripts/optimize-cover.js",
+  "optimize-covers": "node scripts/optimize-covers.js",
+  "validate-content": "node scripts/validate-content.js",
+
+  "test-tmdb": "node scripts/test-tmdb.js"
+},
+  "dependencies": {
+    "@astrojs/react": "^5.0.7",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "astro": "^6.4.2",
+    "chart.js": "^4.5.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  }
+}

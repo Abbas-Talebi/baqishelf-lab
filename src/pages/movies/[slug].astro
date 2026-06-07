@@ -1,0 +1,165 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Rating from "../../components/Rating.astro";
+import { getCollection, render } from "astro:content";
+
+const statusMap = {
+  watched: "✓ تماشا شده",
+  watching: "🎬 در حال تماشا",
+  planned: "📋 برنامه تماشا",
+  dropped: "✕ رها شده",
+};
+
+export async function getStaticPaths() {
+  const movies = await getCollection("movies");
+
+  return movies.map((movie) => ({
+    params: {
+      slug: movie.id,
+    },
+    props: {
+      movie,
+    },
+  }));
+}
+
+const { movie } = Astro.props;
+
+const { Content } = await render(movie);
+
+const genres = movie.data.genres ?? [];
+const tags = movie.data.tags ?? [];
+---
+
+<BaseLayout title={movie.data.title}>
+
+  <div class="movie-header">
+
+    {
+      movie.data.cover && (
+        <img
+          src={`/covers/${movie.data.cover}`}
+          alt={movie.data.title}
+          class="movie-cover"
+        />
+      )
+    }
+
+    <div class="movie-info">
+
+      <h1>{movie.data.title}</h1>
+
+      <div>
+        <strong>امتیاز شخصی:</strong>
+        <Rating value={movie.data.personal_rating} />
+      </div>
+
+      <p>
+        <strong>سال انتشار:</strong>
+        {movie.data.year}
+      </p>
+
+      <p>
+        <strong>وضعیت:</strong>
+        {statusMap[movie.data.status]}
+      </p>
+
+      {
+        movie.data.date_watched && (
+          <p>
+            <strong>تاریخ تماشا:</strong>
+            {movie.data.date_watched.toLocaleDateString("fa-IR")}
+            {" | "}
+            {movie.data.date_watched.toLocaleDateString("en-GB")}
+          </p>
+        )
+      }
+
+      {
+        movie.data.director && (
+          <p>
+            <strong>کارگردان:</strong>
+            {movie.data.director}
+          </p>
+        )
+      }
+
+    </div>
+
+  </div>
+
+  <div>
+    <strong>ژانرها:</strong>
+
+    <div class="badges">
+      {
+        genres.map((genre) => (
+          <span class="badge">
+            {genre}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+
+  <div>
+    <strong>تگ‌ها:</strong>
+
+    <div class="badges">
+      {
+        tags.map((tag) => (
+          <span class="badge">
+            {tag}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+
+  <p>{movie.data.summary}</p>
+
+  <hr />
+
+  <Content />
+
+  <hr />
+
+  <style>
+    .movie-header {
+      display: flex;
+      gap: 2rem;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+    }
+
+    .movie-info {
+      flex: 1;
+    }
+
+    .movie-info h1 {
+      margin-top: 0;
+    }
+
+    .movie-cover {
+      width: 240px;
+      max-width: 100%;
+      border-radius: 12px;
+    }
+
+    .badges {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .badge {
+      border: 1px solid #333;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+    }
+  </style>
+
+</BaseLayout>

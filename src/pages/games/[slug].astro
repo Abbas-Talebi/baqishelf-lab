@@ -1,0 +1,314 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Rating from "../../components/Rating.astro";
+import { getCollection, render } from "astro:content";
+
+const statusMap = {
+  completed: "✓ تکمیل شده",
+  playing: "🎮 در حال تجربه",
+  backlog: "📚 در صف",
+  paused: "⏸ متوقف شده",
+  dropped: "✕ رها شده",
+};
+
+export async function getStaticPaths() {
+  const games = await getCollection("games");
+
+  return games.map((game) => ({
+    params: {
+      slug: game.id,
+    },
+    props: {
+      game,
+    },
+  }));
+}
+
+const { game } = Astro.props;
+
+const { Content } = await render(game);
+
+const genres = game.data.genres ?? [];
+const tags = game.data.tags ?? [];
+
+const completion = game.data.completion_percentage ?? null;
+
+const achievementsUnlocked =
+  game.data.achievements_unlocked ?? null;
+
+const achievementsTotal =
+  game.data.achievements_total ?? null;
+---
+
+<BaseLayout title={game.data.title}>
+
+<div class="game-header">
+
+  {
+    game.data.cover && (
+      <img
+        src={`/covers/${game.data.cover}`}
+        alt={game.data.title}
+        class="game-cover"
+      />
+    )
+  }
+
+  <div class="game-info">
+
+    <h1>{game.data.title}</h1>
+
+    <div>
+      <strong>امتیاز شخصی:</strong>
+      <Rating value={game.data.personal_rating} />
+    </div>
+
+    <p>
+      <strong>سال انتشار:</strong>
+      {game.data.year}
+    </p>
+
+    <p>
+      <strong>وضعیت:</strong>
+      {statusMap[game.data.status]}
+    </p>
+
+{
+  completion !== null && (
+    <div>
+      <strong>پیشرفت:</strong>
+
+      <div class="progress-bar">
+        <div
+          class="progress-fill"
+          style={`width: ${completion}%`}
+        />
+      </div>
+
+      <span>{completion}%</span>
+    </div>
+  )
+}
+
+
+
+  </div>
+
+</div>
+
+{
+  achievementsUnlocked !== null &&
+  achievementsTotal !== null && (
+    <p>
+      <strong>اچیومنت‌ها:</strong>
+      {achievementsUnlocked} / {achievementsTotal}
+    </p>
+  )
+}
+
+
+
+    <p>
+      <strong>پلتفرم:</strong>
+      {
+  game.data.platforms?.map((platform) => (
+    <a
+      href={`/platforms/${platform
+        .toLowerCase()
+        .replaceAll(" ", "-")}`}
+      class="badge"
+    >
+      {platform}
+    </a>
+  ))
+}
+    </p>
+
+    <p>
+  <strong>تاریخ اتمام:</strong>
+  {game.data.date_finished?.toLocaleDateString("fa-IR")}
+  {' | '}
+  {game.data.date_finished?.toLocaleDateString("en-GB")}
+</p>
+
+<p>
+  توسعه‌دهنده:
+  {game.data.developer}
+</p>
+
+<p>
+  ناشر:
+  {game.data.publisher}
+</p>
+
+<div>
+  <strong>ژانرها:</strong>
+
+  <div class="badges">
+    {
+      genres.map((genre) => (
+        <a
+  href={`/genres/${genre
+    .toLowerCase()
+    .replaceAll(" ", "-")}`}
+  class="badge"
+>
+  {genre}
+</a>
+      ))
+    }
+  </div>
+</div>
+
+<div>
+  <strong>تگ‌ها:</strong>
+
+  <div class="badges">
+    {
+      tags.map((tag) => (
+        <span class="badge">{tag}</span>
+      ))
+    }
+  </div>
+</div>
+
+
+
+<p>{game.data.summary}</p>
+
+<hr />
+
+{
+  (game.data.story_rating ||
+    game.data.gameplay_rating ||
+    game.data.music_rating ||
+    game.data.graphics_rating ||
+    game.data.technical_rating) && (
+
+    <section class="rating-breakdown">
+
+      <h2>جزئیات امتیازدهی</h2>
+
+      {
+        game.data.story_rating && (
+          <div>
+            داستان:
+            <Rating value={game.data.story_rating} />
+          </div>
+        )
+      }
+
+      {
+        game.data.gameplay_rating && (
+          <div>
+            گیم‌پلی:
+            <Rating value={game.data.gameplay_rating} />
+          </div>
+        )
+      }
+
+      {
+        game.data.music_rating && (
+          <div>
+            موسیقی:
+            <Rating value={game.data.music_rating} />
+          </div>
+        )
+      }
+
+      {
+        game.data.graphics_rating && (
+          <div>
+            گرافیک:
+            <Rating value={game.data.graphics_rating} />
+          </div>
+        )
+      }
+
+      {
+        game.data.technical_rating && (
+          <div>
+            فنی:
+            <Rating value={game.data.technical_rating} />
+          </div>
+        )
+      }
+
+    </section>
+  )
+}
+
+<Content />
+
+<hr />
+
+<style>
+.game-header {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.progress-bar {
+  width: 100%;
+  max-width: 320px;
+
+  height: 10px;
+
+  border-radius: 999px;
+
+  background: #222;
+
+  overflow: hidden;
+
+  margin-top: 0.5rem;
+}
+
+.progress-fill {
+  height: 100%;
+
+  background: #fff;
+}
+
+.game-info h1 {
+  margin-top: 0;
+}
+
+.rating-breakdown {
+  margin: 2rem 0;
+}
+
+.rating-breakdown div {
+  margin-bottom: 0.75rem;
+}
+
+.game-cover {
+  width: 240px;
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+.game-info {
+  flex: 1;
+}
+
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.badge {
+  border: 1px solid #333;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+
+</style>
+
+</BaseLayout>

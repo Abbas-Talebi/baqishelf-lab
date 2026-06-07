@@ -1,0 +1,32 @@
+---
+const {
+  placeholder =
+    "جستجو..."
+} = Astro.props;
+---
+
+<input
+  id="media-search"
+  type="text"
+  placeholder={placeholder}
+/>
+
+<style>
+
+#media-search {
+  width: 100%;
+
+  padding: .9rem 1rem;
+
+  border-radius: 14px;
+
+  border: 1px solid #333;
+
+  background: #111;
+
+  color: white;
+
+  margin-bottom: 1.5rem;
+}
+
+</style>

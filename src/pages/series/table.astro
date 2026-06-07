@@ -1,0 +1,59 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import SeriesTable from "../../components/SeriesTable.astro";
+
+const series =
+  await getCollection("series");
+
+const sortedSeries =
+  [...series].sort(
+    (a, b) =>
+      b.data.personal_rating -
+      a.data.personal_rating
+  );
+---
+
+<BaseLayout title="سریال‌ها - جدول">
+
+<h1>سریال‌ها</h1>
+
+<div class="view-switch">
+
+<a href="/series">
+  نمای کارت
+</a>
+
+<a href="/series/table">
+  نمای جدول
+</a>
+
+</div>
+
+<p>
+  تعداد سریال‌ها:
+  {series.length}
+</p>
+
+<SeriesTable
+  series={sortedSeries}
+/>
+
+<style>
+.view-switch {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.view-switch a {
+  border: 1px solid #333;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+
+</style>
+
+</BaseLayout>

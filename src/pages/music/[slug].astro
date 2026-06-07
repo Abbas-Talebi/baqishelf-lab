@@ -1,0 +1,197 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Rating from "../../components/Rating.astro";
+import { getCollection, render } from "astro:content";
+
+export async function getStaticPaths() {
+
+  const music =
+    await getCollection("music");
+
+  return music.map((item) => ({
+    params: {
+      slug: item.id,
+    },
+    props: {
+      music: item,
+    },
+  }));
+
+}
+
+const { music } = Astro.props;
+
+const { Content } =
+  await render(music);
+
+const genres =
+  music.data.genres ?? [];
+
+const tags =
+  music.data.tags ?? [];
+---
+
+<BaseLayout title={music.data.title}>
+
+<div class="music-header">
+
+  {
+    music.data.cover && (
+      <img
+        src={`/covers/${music.data.cover}`}
+        alt={music.data.title}
+        class="music-cover"
+      />
+    )
+  }
+
+  <div class="music-info">
+
+    <h1>
+      {music.data.title}
+    </h1>
+
+    {
+      music.data.artist && (
+        <p>
+          <strong>
+            هنرمند:
+          </strong>
+
+          {music.data.artist}
+        </p>
+      )
+    }
+
+    <div>
+
+      <strong>
+        امتیاز شخصی:
+      </strong>
+
+      <Rating
+        value={music.data.personal_rating}
+      />
+
+    </div>
+
+    <p>
+
+      <strong>
+        سال انتشار:
+      </strong>
+
+      {music.data.year}
+
+    </p>
+
+    {
+      music.data.date_listened && (
+        <p>
+
+          <strong>
+            تاریخ شنیدن:
+          </strong>
+
+          {
+            music.data.date_listened
+              .toLocaleDateString(
+                "fa-IR"
+              )
+          }
+
+        </p>
+      )
+    }
+
+  </div>
+
+</div>
+
+<div>
+
+  <strong>
+    ژانرها:
+  </strong>
+
+  <div class="badges">
+
+    {
+      genres.map((genre) => (
+        <span class="badge">
+          {genre}
+        </span>
+      ))
+    }
+
+  </div>
+
+</div>
+
+<div>
+
+  <strong>
+    تگ‌ها:
+  </strong>
+
+  <div class="badges">
+
+    {
+      tags.map((tag) => (
+        <span class="badge">
+          {tag}
+        </span>
+      ))
+    }
+
+  </div>
+
+</div>
+
+{
+  music.data.summary && (
+    <p>
+      {music.data.summary}
+    </p>
+  )
+}
+
+<hr />
+
+<Content />
+
+<style>
+
+.music-header {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.music-cover {
+  width: 260px;
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+.music-info {
+  flex: 1;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.badge {
+  border: 1px solid #333;
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+}
+
+</style>
+
+</BaseLayout>

@@ -1,0 +1,47 @@
+---
+const {
+  src,
+  alt,
+  type = "poster",
+} = Astro.props;
+---
+
+<img
+  src={src}
+  alt={alt}
+  loading="lazy"
+  decoding="async"
+  class={`cover ${type}`}
+/>
+
+<style>
+
+.cover {
+  display: block;
+
+  object-fit: cover;
+
+  border-radius: 12px;
+
+  flex-shrink: 0;
+
+  transition:
+    transform .25s ease,
+    filter .25s ease;
+}
+
+.cover:hover {
+  transform: scale(1.02);
+}
+
+.cover.poster {
+  width: 200px;
+  aspect-ratio: 2 / 3;
+}
+
+.cover.square {
+  width: 220px;
+  aspect-ratio: 1 / 1;
+}
+
+</style>

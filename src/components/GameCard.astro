@@ -1,0 +1,99 @@
+---
+import Rating from "./Rating.astro";
+import StatusBadge from "./StatusBadge.astro";
+import Cover from "./Cover.astro";
+
+const { game } = Astro.props;
+---
+
+<a
+  href={`/games/${game.id}`}
+  class="card"
+  data-title={game.data.title}
+  data-status={game.data.status}
+  data-rating={game.data.personal_rating}
+  data-platforms={game.data.platforms?.join(" ")}
+  data-genres={game.data.genres?.join(" ")}
+  data-tags={game.data.tags?.join(" ")}
+  data-year={game.data.year}
+  data-finished={game.data.date_finished ?? ""}
+  data-tags={game.data.tags?.join(",") ?? ""}
+  
+  
+>
+{
+  game.data.cover && (
+    <Cover
+      src={`/covers/${game.data.cover}`}
+      alt={game.data.title}
+      type={game.data.cover_type}
+    />
+  )
+}
+
+
+  <div class="info">
+  
+    {
+    game.data.tags?.includes("favorite") && (
+      <span class="favorite-badge">
+        ★ Favorite
+      </span>
+    )
+  }
+
+  
+    <h2>{game.data.title}</h2>
+
+    <Rating value={game.data.personal_rating} />
+
+    <p>{game.data.year}</p>
+
+    <p>{game.data.platforms?.join(", ")}</p>
+
+<StatusBadge
+  status={game.data.status}
+/>
+
+  </div>
+</a>
+
+<style>
+.card {
+  display: flex;
+  gap: 1rem;
+
+  padding: 1rem;
+
+  border: 1px solid #2a2a2a;
+
+  border-radius: 12px;
+
+  text-decoration: none;
+
+  color: inherit;
+
+  margin-bottom: 1rem;
+
+  transition: 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+.favorite-badge {
+  display: inline-block;
+
+  margin-bottom: 0.5rem;
+
+  padding: 0.2rem 0.6rem;
+
+  border-radius: 999px;
+
+  border: 1px solid #444;
+
+  font-size: 0.8rem;
+}
+
+</style>

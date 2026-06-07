@@ -1,0 +1,25 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import GameCard from "../../components/GameCard.astro";
+
+const games = await getCollection("games");
+
+const completedGames = games.filter(
+  (game) => game.data.status === "completed"
+);
+---
+
+<BaseLayout title="بازی‌های تکمیل شده">
+
+<h1>بازی‌های تکمیل شده</h1>
+
+<p>{completedGames.length} بازی</p>
+
+{
+  completedGames.map((game) => (
+    <GameCard game={game} />
+  ))
+}
+
+</BaseLayout>

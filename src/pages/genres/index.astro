@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+
+const games = await getCollection("games");
+
+const genres = [
+  ...new Set(
+    games.flatMap(
+      (game) => game.data.genres ?? []
+    )
+  ),
+].sort();
+---
+
+<BaseLayout title="ژانرها">
+
+<h1>ژانرها</h1>
+
+<div class="genres-grid">
+
+{
+  genres.map((genre) => (
+    <a
+      href={`/genres/${genre
+        .toLowerCase()
+        .replaceAll(" ", "-")}`}
+      class="genre-card"
+    >
+      {genre}
+    </a>
+  ))
+}
+
+</div>
+
+</BaseLayout>
+
+<style>
+.genres-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(auto-fit, minmax(200px, 1fr));
+
+  gap: 1rem;
+}
+
+.genre-card {
+  border: 1px solid #333;
+
+  border-radius: 12px;
+
+  padding: 1rem;
+
+  text-decoration: none;
+}
+</style>

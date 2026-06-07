@@ -1,0 +1,197 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+
+const games = await getCollection("games");
+const totalGames = games.length;
+
+// میانگین امتیاز
+const averageRating =
+  totalGames > 0
+    ? (games.reduce((sum, g) => sum + g.data.personal_rating, 0) / totalGames).toFixed(2)
+    : 0;
+
+// وضعیت‌ها
+const completedGames = games.filter(g => g.data.status === "completed").length;
+const playingGames = games.filter(g => g.data.status === "playing").length;
+const droppedGames = games.filter(g => g.data.status === "dropped").length;
+const favoriteGames = games.filter(g => g.data.tags?.includes("favorite")).length;
+
+// ژانر محبوب
+const genreCount: Record<string, number> = {};
+for (const game of games) {
+  for (const genre of game.data.genres ?? []) {
+    genreCount[genre] = (genreCount[genre] ?? 0) + 1;
+  }
+}
+const topGenre = Object.entries(genreCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "نامشخص";
+
+// پلتفرم محبوب
+const platformCount: Record<string, number> = {};
+for (const game of games) {
+  for (const platform of game.data.platforms ?? []) {
+    platformCount[platform] = (platformCount[platform] ?? 0) + 1;
+  }
+}
+const topPlatform = Object.entries(platformCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "نامشخص";
+
+// Achievement‌ها
+const totalAchievementsUnlocked = games.reduce((sum, g) => sum + (g.data.achievements_unlocked ?? 0), 0);
+const totalAchievements = games.reduce((sum, g) => sum + (g.data.achievements_total ?? 0), 0);
+const achievementRate = totalAchievements > 0 ? ((totalAchievementsUnlocked / totalAchievements) * 100).toFixed(1) : 0;
+
+// نرخ تکمیل آرشیو
+const archiveCompletion = totalGames > 0 ? ((completedGames / totalGames) * 100).toFixed(1) : 0;
+---
+
+<BaseLayout title="آمار">
+  <section class="stats-hero">
+    <div>
+      <p class="hero-subtitle">داشبورد شخصی</p>
+      <h1>🎮 Game Statistics</h1>
+      <p class="hero-description">نمای کلی آرشیو، امتیازها، پیشرفت بازی‌ها و اچیومنت‌ها</p>
+    </div>
+    <div class="hero-number">
+      {totalGames}
+      <span>بازی ثبت شده</span>
+    </div>
+  </section>
+
+  <div class="stats-grid">
+    <!-- کارت‌های اصلی آماری -->
+    <div class="stat-card">
+      <span class="emoji">⭐</span>
+      <h2>{averageRating}</h2>
+      <p>میانگین امتیاز</p>
+    </div>
+
+    <div class="stat-card">
+      <span class="emoji">❤️</span>
+      <h2>{favoriteGames}</h2>
+      <p>Favorite</p>
+    </div>
+
+    <div class="stat-card">
+      <span class="emoji">🎭</span>
+      <h2>{topGenre}</h2>
+      <p>محبوب‌ترین ژانر</p>
+    </div>
+
+    <div class="stat-card">
+      <span class="emoji">🖥️</span>
+      <h2>{topPlatform}</h2>
+      <p>محبوب‌ترین پلتفرم</p>
+    </div>
+
+    <!-- کارت پیشرفت Achievement -->
+    <div class="stat-card achievement-card">
+      <div class="card-header">
+        <span>🏆 Achievement Progress</span>
+        <strong>{achievementRate}%</strong>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style={`width: ${achievementRate}%`}></div>
+      </div>
+      <p>{totalAchievementsUnlocked} / {totalAchievements}</p>
+    </div>
+
+    <!-- وضعیت بازی‌ها -->
+    <div class="stat-card">
+      <span class="emoji">✅</span>
+      <h2>{completedGames}</h2>
+      <p>تکمیل شده</p>
+    </div>
+
+    <div class="stat-card">
+      <span class="emoji">🎮</span>
+      <h2>{playingGames}</h2>
+      <p>در حال تجربه</p>
+    </div>
+
+    <div class="stat-card">
+      <span class="emoji">💔</span>
+      <h2>{droppedGames}</h2>
+      <p>رها شده</p>
+    </div>
+
+    <div class="stat-card">
+      <span class="emoji">📊</span>
+      <h2>{archiveCompletion}%</h2>
+      <p>نرخ تکمیل آرشیو</p>
+    </div>
+  </div>
+
+  <style>
+    .stats-hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #171717, #101010);
+      border: 1px solid #262626;
+    }
+    .hero-subtitle {
+      color: #8b5cf6;
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+    }
+    .hero-description {
+      opacity: 0.7;
+    }
+    .hero-number {
+      font-size: 4rem;
+      font-weight: 800;
+    }
+    .hero-number span {
+      display: block;
+      font-size: 0.9rem;
+      opacity: 0.6;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+    .stat-card {
+      background: linear-gradient(180deg, #171717, #101010);
+      border: 1px solid #222;
+      border-radius: 20px;
+      padding: 1.4rem;
+      transition: 0.25s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-6px);
+      border-color: #444;
+    }
+    .stat-card h2 {
+      margin: 0.6rem 0;
+      font-size: 2rem;
+    }
+    .stat-card p {
+      opacity: 0.7;
+    }
+    .emoji {
+      font-size: 1.8rem;
+      display: block;
+    }
+    .progress-bar {
+      height: 12px;
+      background: #222;
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #8b5cf6, #3b82f6, #06b6d4);
+      border-radius: 999px;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</BaseLayout>

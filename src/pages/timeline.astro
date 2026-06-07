@@ -1,0 +1,292 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+
+const games = await getCollection("games");
+const movies = await getCollection("movies");
+const series = await getCollection("series");
+const books = await getCollection("books");
+const music = await getCollection("music");
+
+const gameEntries = games
+  .filter((g) => g.data.date_finished)
+  .map((g) => ({
+    type: "game",
+    title: g.data.title,
+    cover: g.data.cover,
+    date: g.data.date_finished,
+    slug: `/games/${g.id}`,
+  }));
+
+const movieEntries = movies
+  .filter((m) => m.data.date_watched)
+  .map((m) => ({
+    type: "movie",
+    title: m.data.title,
+    cover: m.data.cover,
+    date: m.data.date_watched,
+    slug: `/movies/${m.id}`,
+  }));
+
+const seriesEntries = series
+  .filter((s) => s.data.date_watched)   
+  .map((s) => ({
+    type: "series",
+    title: s.data.title,
+    cover: s.data.cover,
+    date: s.data.date_watched,          
+    slug: `/series/${s.id}`,
+  }));
+
+const bookEntries = books
+  .filter((b) => b.data.date_finished)
+  .map((b) => ({
+    type: "book",
+    title: b.data.title,
+    cover: b.data.cover,
+    date: b.data.date_finished,
+    slug: `/books/${b.id}`,
+  }));
+
+const musicEntries = music
+  .filter((m) => m.data.date_listened)
+  .map((m) => ({
+    type: "music",
+    title: m.data.title,
+    cover: m.data.cover,
+    date: m.data.date_listened,
+    slug: `/music/${m.id}`,
+  }));
+
+const timelineEntries = [
+  ...gameEntries,
+  ...movieEntries,
+  ...seriesEntries,
+  ...bookEntries,
+  ...musicEntries,
+];
+
+const sortedEntries = [...timelineEntries].sort(
+  (a, b) => b.date.getTime() - a.date.getTime()
+);
+
+const monthNames = [
+  "ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن",
+  "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"
+];
+
+// گروه‌بندی بر اساس سال و ماه
+const groupedTimeline = {};
+sortedEntries.forEach((item) => {
+  const year = item.date.getFullYear();
+  const month = item.date.getMonth();
+  if (!groupedTimeline[year]) groupedTimeline[year] = {};
+  if (!groupedTimeline[year][month]) groupedTimeline[year][month] = [];
+  groupedTimeline[year][month].push(item);
+});
+
+const years = Object.keys(groupedTimeline).sort((a, b) => Number(b) - Number(a));
+---
+
+<BaseLayout title="خط زمانی">
+  <h1>خط زمانی</h1>
+
+  <div class="filters">
+    <select id="year-filter" aria-label="فیلتر سال">
+      <option value="">همه سال‌ها</option>
+      {years.map((year) => (
+        <option value={year}>{year}</option>
+      ))}
+    </select>
+
+    <select id="type-filter" aria-label="فیلتر مدیا">
+      <option value="">همه مدیاها</option>
+      <option value="game">🎮 بازی</option>
+      <option value="movie">🎬 فیلم</option>
+      <option value="series">📺 سریال</option>
+      <option value="book">📚 کتاب</option>
+      <option value="music">🎵 موسیقی</option>
+    </select>
+  </div>
+
+  <p>📊 تعداد آثار ثبت‌شده: {sortedEntries.length}</p>
+
+  <div class="stats-grid">
+    <div>🎮 {games.length} بازی</div>
+    <div>🎬 {movies.length} فیلم</div>
+    <div>📺 {series.length} سریال</div>
+    <div>📚 {books.length} کتاب</div>
+    <div>🎵 {music.length} موسیقی</div>
+  </div>
+
+  {Object.entries(groupedTimeline)
+    .sort(([a], [b]) => Number(b) - Number(a))
+    .map(([year, months]) => (
+      <section class="year-group" data-year={year}>
+        <h2>{year}</h2>
+        {Object.entries(months)
+          .sort(([a], [b]) => Number(b) - Number(a))
+          .map(([month, entries]) => (
+            <div class="month-group" data-month={month}>
+              <h3>{monthNames[Number(month)]}</h3>
+              {entries.map((item) => (
+                <div class="timeline-item" data-type={item.type}>
+                  {item.cover && (
+                    <img
+                      src={`/covers/${item.cover}`}
+                      alt={item.title}
+                      class="timeline-cover"
+                    />
+                  )}
+                  <div>
+                    <div class="timeline-title-row">
+                      <strong><a href={item.slug}>{item.title}</a></strong>
+                      <span class={`media-badge ${item.type}`}>
+                        {item.type === "game" ? "🎮 بازی"
+                          : item.type === "movie" ? "🎬 فیلم"
+                          : item.type === "series" ? "📺 سریال"
+                          : item.type === "book" ? "📚 کتاب"
+                          : "🎵 موسیقی"}
+                      </span>
+                    </div>
+                    <p class="timeline-date-fa">
+                      {item.date.toLocaleDateString("fa-IR")}
+                    </p>
+                    <p class="timeline-date-en">
+                      {item.date.toLocaleDateString("en-CA")}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+      </section>
+    ))}
+</BaseLayout>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const yearFilter = document.getElementById("year-filter");
+    const typeFilter = document.getElementById("type-filter");
+
+    function updateVisibility() {
+      const selectedYear = yearFilter?.value ?? "";
+      const selectedType = typeFilter?.value ?? "";
+
+      // 1. فیلتر کردن آیتم‌ها
+      const allItems = document.querySelectorAll(".timeline-item");
+      allItems.forEach((item) => {
+        const parentYear = item.closest(".year-group")?.dataset.year;
+        const itemType = item.dataset.type;
+        let visible = true;
+        if (selectedYear && parentYear !== selectedYear) visible = false;
+        if (selectedType && itemType !== selectedType) visible = false;
+        item.style.display = visible ? "" : "none";
+      });
+
+      // 2. پنهان کردن ماه‌های بدون آیتم قابل مشاهده
+      const allMonths = document.querySelectorAll(".month-group");
+      allMonths.forEach((month) => {
+        const visibleItems = Array.from(month.querySelectorAll(".timeline-item"))
+          .filter(item => item.style.display !== "none");
+        month.style.display = visibleItems.length > 0 ? "" : "none";
+      });
+
+      // 3. پنهان کردن سال‌های بدون ماه قابل مشاهده
+      const allYears = document.querySelectorAll(".year-group");
+      allYears.forEach((year) => {
+        const visibleMonths = Array.from(year.querySelectorAll(".month-group"))
+          .filter(month => month.style.display !== "none");
+        year.style.display = visibleMonths.length > 0 ? "" : "none";
+      });
+    }
+
+    yearFilter?.addEventListener("change", updateVisibility);
+    typeFilter?.addEventListener("change", updateVisibility);
+
+    // اجرای اولیه (مقادیر URL در صورت نیاز قابل اضافه است)
+    updateVisibility();
+  });
+</script>
+
+<style>
+  .filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  #year-filter, #type-filter {
+    padding: 0.7rem 1rem;
+    border: 1px solid #333;
+    border-radius: 10px;
+    background: #111;
+    color: white;
+    cursor: pointer;
+  }
+  .year-group {
+    margin-bottom: 3rem;
+  }
+  .month-group {
+    margin-bottom: 2rem;
+  }
+  .timeline-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    border-right: 2px solid #333;
+    padding-right: 1rem;
+  }
+  .stats-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stats-grid div {
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    background: #0f0f0f;
+  }
+  .timeline-cover {
+    width: 150px;
+    height: 225px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  /* برای موسیقی که کاور مربعی است */
+  .timeline-item:has(.timeline-cover[src*="music"]) .timeline-cover {
+    width: 150px;
+    height: 150px;
+  }
+  .timeline-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .media-badge {
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  .media-badge.game { border: 1px solid #6b7280; background: #1f2937; }
+  .media-badge.movie { border: 1px solid #9ca3af; background: #374151; }
+  .media-badge.series { border: 1px solid #60a5fa; background: #1e3a8a; }
+  .media-badge.book { border: 1px solid #fbbf24; background: #78350f; }
+  .media-badge.music { border: 1px solid #c084fc; background: #4c1d95; }
+  .timeline-date-fa, .timeline-date-en {
+    margin: 0.25rem 0;
+    font-size: 0.85rem;
+    opacity: 0.8;
+  }
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+</style>

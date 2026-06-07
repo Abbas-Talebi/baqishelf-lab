@@ -1,0 +1,64 @@
+---
+import Rating from "./Rating.astro";
+import StatusBadge from "./StatusBadge.astro";
+import Cover from "./Cover.astro";
+
+const { music } = Astro.props;
+---
+
+<p>{music.data.cover_type}</p>
+
+
+<a
+  href={`/music/${music.id}`}
+  class="card"
+  data-title={music.data.title}   // <-- اضافه شد
+>
+  <Cover
+  src={`/covers/${music.data.cover}`}
+  alt={music.data.title}
+  type={music.data.cover_type}
+/>
+
+  <div class="info">
+    <h2>{music.data.title}</h2>
+    {
+      music.data.artist && (
+        <p class="artist">🎤 {music.data.artist}</p>
+      )
+    }
+    <Rating value={music.data.personal_rating} />
+    <p>{music.data.year}</p>
+    <p>{music.data.genres?.join("، ")}</p>
+  </div>
+</a>
+
+<style>
+  /* استایل‌های قبلی بدون تغییر */
+  .card {
+    display: flex;
+    gap: 1rem;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1rem;
+    text-decoration: none;
+    color: inherit;
+    margin-bottom: 1rem;
+    transition: 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+  }
+ 
+  .info {
+    flex: 1;
+  }
+  .info h2 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+  }
+  .artist {
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+  }
+</style>

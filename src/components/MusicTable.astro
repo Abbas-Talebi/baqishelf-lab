@@ -1,0 +1,127 @@
+---
+import Rating from "./Rating.astro";
+
+const { music } = Astro.props;
+---
+
+<table class="music-table">
+  <thead>
+    <tr>
+      <th>کاور</th>
+      <th data-sort="string">عنوان ↕</th>
+      <th data-sort="string">هنرمند ↕</th>
+      <th data-sort="number">امتیاز ↕</th>
+      <th data-sort="number">سال ↕</th>
+      <th data-sort="string">ژانر ↕</th>
+      <th data-sort="date">تاریخ شنیدن ↕</th>
+    </tr>
+  </thead>
+  <tbody>
+    {
+      music.map((item) => (
+        <tr>
+          <td>
+            {
+              item.data.cover && (
+                <img
+                  src={`/covers/${item.data.cover}`}
+                  alt={item.data.title}
+                  class="cover"
+                />
+              )
+            }
+          </td>
+          <td data-value={item.data.title}>
+            <a href={`/music/${item.id}`}>
+              {item.data.title}
+            </a>
+          </td>
+          <td data-value={item.data.artist ?? ""}>
+            {item.data.artist}
+          </td>
+          <td data-value={item.data.personal_rating}>
+            <Rating value={item.data.personal_rating} />
+          </td>
+          <td data-value={item.data.year}>
+            {item.data.year}
+          </td>
+          <td data-value={item.data.genres?.join(", ") ?? ""}>
+            {item.data.genres?.join("، ")}
+          </td>
+          <td data-value={item.data.date_listened?.getTime() ?? 0}>
+            {item.data.date_listened?.toLocaleDateString("fa-IR")}
+          </td>
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const table = document.querySelector(".music-table");
+    if (!table) return;
+
+    const headers = table.querySelectorAll("th[data-sort]");
+
+    headers.forEach((header) => {
+      let ascending = true;
+      header.style.cursor = "pointer";
+
+      header.addEventListener("click", () => {
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        const columnIndex = header.cellIndex;
+        const sortType = header.dataset.sort;
+
+        rows.sort((a, b) => {
+          const aCell = a.children[columnIndex];
+          const bCell = b.children[columnIndex];
+          let aVal = aCell?.dataset?.value ?? "";
+          let bVal = bCell?.dataset?.value ?? "";
+
+          if (sortType === "number" || sortType === "date") {
+            aVal = Number(aVal);
+            bVal = Number(bVal);
+            return ascending ? aVal - bVal : bVal - aVal;
+          }
+
+          // sortType === "string"
+          return ascending
+            ? String(aVal).localeCompare(String(bVal))
+            : String(bVal).localeCompare(String(aVal));
+        });
+
+        ascending = !ascending;
+        tbody.replaceChildren(...rows);
+      });
+    });
+  });
+</script>
+
+<style>
+  .music-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .music-table th,
+  .music-table td {
+    padding: 0.75rem;
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .cover {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+
+  .music-table td a {
+    text-decoration: none;
+  }
+</style>
