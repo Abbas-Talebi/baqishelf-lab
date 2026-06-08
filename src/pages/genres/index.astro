@@ -2,14 +2,22 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 
+const base = import.meta.env.BASE_URL;
+
 const games = await getCollection("games");
+const movies = await getCollection("movies");
+const books = await getCollection("books");
+const series = await getCollection("series");
+const music = await getCollection("music");
 
 const genres = [
-  ...new Set(
-    games.flatMap(
-      (game) => game.data.genres ?? []
-    )
-  ),
+  ...new Set([
+    ...games.flatMap((item) => item.data.genres ?? []),
+    ...movies.flatMap((item) => item.data.genres ?? []),
+    ...books.flatMap((item) => item.data.genres ?? []),
+    ...series.flatMap((item) => item.data.genres ?? []),
+    ...music.flatMap((item) => item.data.genres ?? []),
+  ]),
 ].sort();
 ---
 
@@ -19,40 +27,41 @@ const genres = [
 
 <div class="genres-grid">
 
-{
-  genres.map((genre) => (
-    <a
-      href={`/genres/${genre
-        .toLowerCase()
-        .replaceAll(" ", "-")}`}
-      class="genre-card"
-    >
-      {genre}
-    </a>
-  ))
-}
+  {
+    genres.map((genre) => (
+      <a
+        href={`${base}genres/${genre
+          .toLowerCase()
+          .replaceAll(" ", "-")}`}
+        class="genre-card"
+      >
+        {genre}
+      </a>
+    ))
+  }
 
 </div>
-
-</BaseLayout>
 
 <style>
 .genres-grid {
   display: grid;
-
   grid-template-columns:
     repeat(auto-fit, minmax(200px, 1fr));
-
   gap: 1rem;
 }
 
 .genre-card {
   border: 1px solid #333;
-
   border-radius: 12px;
-
   padding: 1rem;
-
   text-decoration: none;
+  color: inherit;
+  transition: 0.2s;
+}
+
+.genre-card:hover {
+  transform: translateY(-2px);
 }
 </style>
+
+</BaseLayout>

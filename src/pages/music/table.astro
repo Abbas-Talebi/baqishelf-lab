@@ -3,6 +3,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import MusicTable from "../../components/MusicTable.astro";
 
+const base = import.meta.env.BASE_URL;
+
 const music =
   await getCollection("music");
 
@@ -20,11 +22,11 @@ const sortedMusic =
 
 <div class="view-switch">
 
-  <a href="/music">
+  <a href={`${base}music`}>
     نمای کارت
   </a>
 
-  <a href="/music/table">
+  <a href={`${base}music/table`}>
     نمای جدول
   </a>
 
@@ -40,7 +42,6 @@ const sortedMusic =
 />
 
 <style>
-
 .view-switch {
   display: flex;
   gap: 1rem;
@@ -53,7 +54,6 @@ const sortedMusic =
   border-radius: 8px;
   text-decoration: none;
 }
-
 </style>
 
 </BaseLayout>

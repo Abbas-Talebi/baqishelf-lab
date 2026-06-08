@@ -4,6 +4,8 @@ import { getCollection } from "astro:content";
 import MusicCard from "../components/MusicCard.astro";
 import SearchBar from "../components/SearchBar.astro";
 
+const base = import.meta.env.BASE_URL;
+
 const music = await getCollection("music");
 
 const sortedMusic = [...music].sort(
@@ -17,8 +19,13 @@ const sortedMusic = [...music].sort(
   <SearchBar placeholder="جستجوی موسیقی..." />
 
   <div class="view-switch">
-    <a href="/music">نمای کارت</a>
-    <a href="/music/table">نمای جدول</a>
+    <a href={`${base}music`}>
+      نمای کارت
+    </a>
+
+    <a href={`${base}music/table`}>
+      نمای جدول
+    </a>
   </div>
 
   <p>تعداد آثار: {music.length}</p>
@@ -32,19 +39,37 @@ const sortedMusic = [...music].sort(
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const searchInput = document.getElementById("media-search");
-    const musicContainer = document.getElementById("music-list");
+    const searchInput =
+      document.getElementById("media-search");
 
-    if (!searchInput || !musicContainer) return;
+    const musicContainer =
+      document.getElementById("music-list");
 
-    const getCards = () => [...document.querySelectorAll("#music-list .card")];
+    if (!searchInput || !musicContainer)
+      return;
+
+    const getCards = () =>
+      [
+        ...document.querySelectorAll(
+          "#music-list .card"
+        ),
+      ];
 
     const applyFilter = () => {
-      const query = searchInput.value.trim().toLowerCase();
+      const query =
+        searchInput.value
+          .trim()
+          .toLowerCase();
 
       getCards().forEach((card) => {
-        const title = card.dataset.title?.toLowerCase() ?? "";
-        if (query && !title.includes(query)) {
+        const title =
+          card.dataset.title?.toLowerCase() ??
+          "";
+
+        if (
+          query &&
+          !title.includes(query)
+        ) {
           card.style.display = "none";
         } else {
           card.style.display = "";
@@ -52,8 +77,12 @@ const sortedMusic = [...music].sort(
       });
     };
 
-    searchInput.addEventListener("input", applyFilter);
-    applyFilter(); // اجرای اولیه
+    searchInput.addEventListener(
+      "input",
+      applyFilter
+    );
+
+    applyFilter();
   });
 </script>
 
@@ -63,12 +92,14 @@ const sortedMusic = [...music].sort(
     gap: 1rem;
     margin-bottom: 2rem;
   }
+
   .view-switch a {
     border: 1px solid #333;
     padding: 0.5rem 1rem;
     border-radius: 8px;
     text-decoration: none;
   }
+
   #music-list {
     display: flex;
     flex-direction: column;

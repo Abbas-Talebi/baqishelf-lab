@@ -4,24 +4,34 @@ import StatusBadge from "./StatusBadge.astro";
 import Cover from "./Cover.astro";
 
 const { series } = Astro.props;
+
+const base = import.meta.env.BASE_URL;
 ---
 
 <a
-  href={`/series/${series.id}`}
+  href={`${base}series/${series.id}`}
   class="card"
   data-title={series.data.title}
 >
   <Cover
-  src={`/covers/${series.data.cover}`}
-  alt={series.data.title}
-  type={series.data.cover_type}
-/>
+    src={`${base}covers/${series.data.cover}`}
+    alt={series.data.title}
+    type={series.data.cover_type}
+  />
 
   <div class="info">
     <h2>{series.data.title}</h2>
-    <Rating value={series.data.personal_rating} />
+
+    <Rating
+      value={series.data.personal_rating}
+    />
+
     <p>{series.data.year}</p>
-    <p>{series.data.genres?.join(", ")}</p>
+
+    <p>
+      {series.data.genres?.join(", ")}
+    </p>
+
     {series.data.date_watched && (
       <p class="date-watched">
         📅 {series.data.date_watched.toLocaleDateString("fa-IR")}
@@ -31,24 +41,24 @@ const { series } = Astro.props;
 </a>
 
 <style>
-  /* استایل‌های قبلی */
-  .card {
-    display: flex;
-    gap: 1rem;
-    border: 1px solid #333;
-    border-radius: 12px;
-    padding: 1rem;
-    text-decoration: none;
-    color: inherit;
-    margin-bottom: 1rem;
-  }
+.card {
+  display: flex;
+  gap: 1rem;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1rem;
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: 1rem;
+}
 
-  .info h2 {
-    margin-top: 0;
-  }
-  .date-watched {
-    font-size: 0.8rem;
-    opacity: 0.7;
-    margin-top: 0.5rem;
-  }
+.info h2 {
+  margin-top: 0;
+}
+
+.date-watched {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-top: 0.5rem;
+}
 </style>

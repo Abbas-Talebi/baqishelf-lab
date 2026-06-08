@@ -5,6 +5,8 @@ import Cover from "./Cover.astro";
 
 const { book } = Astro.props;
 
+const base = import.meta.env.BASE_URL;
+
 const statusMap = {
   completed: "✓ خوانده شده",
   reading: "📖 در حال خواندن",
@@ -14,7 +16,7 @@ const statusMap = {
 ---
 
 <a
-  href={`/books/${book.id}`}
+  href={`${base}books/${book.id}`}
   class="card"
   data-title={book.data.title}
   data-status={book.data.status}
@@ -25,10 +27,10 @@ const statusMap = {
 >
 
   <Cover
-  src={`/covers/${book.data.cover}`}
-  alt={book.data.title}
-  type={book.data.cover_type}
-/>
+    src={`${base}covers/${book.data.cover}`}
+    alt={book.data.title}
+    type={book.data.cover_type}
+  />
 
   <div class="info">
 
@@ -98,8 +100,6 @@ const statusMap = {
 .card:hover {
   transform: translateY(-2px);
 }
-
-
 
 .info h2 {
   margin-top: 0;

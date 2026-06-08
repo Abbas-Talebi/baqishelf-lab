@@ -5,6 +5,8 @@ import MovieCard from "../components/MovieCard.astro";
 import MovieTable from "../components/MovieTable.astro";
 import SearchBar from "../components/SearchBar.astro";
 
+const base = import.meta.env.BASE_URL;
+
 const movies = await getCollection("movies");
 
 const sortedMovies = [...movies].sort(
@@ -20,8 +22,13 @@ const view = Astro.url.searchParams.get("view") ?? "card";
   <SearchBar placeholder="جستجوی فیلم..." />
 
   <div class="view-switch">
-    <a href="/movies">نمای کارت</a>
-    <a href="/movies/table">نمای جدول</a>
+    <a href={`${base}movies`}>
+      نمای کارت
+    </a>
+
+    <a href={`${base}movies/table`}>
+      نمای جدول
+    </a>
   </div>
 
   <p>تعداد فیلم‌ها: {movies.length}</p>
@@ -41,20 +48,37 @@ const view = Astro.url.searchParams.get("view") ?? "card";
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const searchInput = document.getElementById("media-search");
-    const moviesContainer = document.getElementById("movies-list");
+    const searchInput =
+      document.getElementById("media-search");
 
-    // فقط در نمای کارت (اگر container وجود داشته باشد) فیلتر را فعال کن
-    if (!searchInput || !moviesContainer) return;
+    const moviesContainer =
+      document.getElementById("movies-list");
 
-    const getCards = () => [...document.querySelectorAll("#movies-list .card")];
+    if (!searchInput || !moviesContainer)
+      return;
+
+    const getCards = () =>
+      [
+        ...document.querySelectorAll(
+          "#movies-list .card"
+        ),
+      ];
 
     const applyFilter = () => {
-      const query = searchInput.value.trim().toLowerCase();
+      const query =
+        searchInput.value
+          .trim()
+          .toLowerCase();
 
       getCards().forEach((card) => {
-        const title = card.dataset.title?.toLowerCase() ?? "";
-        if (query && !title.includes(query)) {
+        const title =
+          card.dataset.title?.toLowerCase() ??
+          "";
+
+        if (
+          query &&
+          !title.includes(query)
+        ) {
           card.style.display = "none";
         } else {
           card.style.display = "";
@@ -62,8 +86,11 @@ const view = Astro.url.searchParams.get("view") ?? "card";
       });
     };
 
-    searchInput.addEventListener("input", applyFilter);
-    // اجرای اولیه (در صورتی که مقدار پیش‌فرضی در جستجو باشد)
+    searchInput.addEventListener(
+      "input",
+      applyFilter
+    );
+
     applyFilter();
   });
 </script>
@@ -74,13 +101,14 @@ const view = Astro.url.searchParams.get("view") ?? "card";
     gap: 1rem;
     margin-bottom: 2rem;
   }
+
   .view-switch a {
     border: 1px solid #333;
     padding: 0.5rem 1rem;
     border-radius: 8px;
     text-decoration: none;
   }
-  /* اضافه کردن استایل برای container (اختیاری) */
+
   #movies-list {
     display: flex;
     flex-direction: column;

@@ -4,10 +4,12 @@ import StatusBadge from "./StatusBadge.astro";
 import Cover from "./Cover.astro";
 
 const { game } = Astro.props;
+
+const base = import.meta.env.BASE_URL;
 ---
 
 <a
-  href={`/games/${game.id}`}
+  href={`${base}games/${game.id}`}
   class="card"
   data-title={game.data.title}
   data-status={game.data.status}
@@ -18,31 +20,27 @@ const { game } = Astro.props;
   data-year={game.data.year}
   data-finished={game.data.date_finished ?? ""}
   data-tags={game.data.tags?.join(",") ?? ""}
-  
-  
 >
-{
-  game.data.cover && (
-    <Cover
-      src={`/covers/${game.data.cover}`}
-      alt={game.data.title}
-      type={game.data.cover_type}
-    />
-  )
-}
-
-
-  <div class="info">
-  
-    {
-    game.data.tags?.includes("favorite") && (
-      <span class="favorite-badge">
-        ★ Favorite
-      </span>
+  {
+    game.data.cover && (
+      <Cover
+        src={`${base}covers/${game.data.cover}`}
+        alt={game.data.title}
+        type={game.data.cover_type}
+      />
     )
   }
 
-  
+  <div class="info">
+
+    {
+      game.data.tags?.includes("favorite") && (
+        <span class="favorite-badge">
+          ★ Favorite
+        </span>
+      )
+    }
+
     <h2>{game.data.title}</h2>
 
     <Rating value={game.data.personal_rating} />
@@ -51,9 +49,9 @@ const { game } = Astro.props;
 
     <p>{game.data.platforms?.join(", ")}</p>
 
-<StatusBadge
-  status={game.data.status}
-/>
+    <StatusBadge
+      status={game.data.status}
+    />
 
   </div>
 </a>
@@ -95,5 +93,4 @@ const { game } = Astro.props;
 
   font-size: 0.8rem;
 }
-
 </style>

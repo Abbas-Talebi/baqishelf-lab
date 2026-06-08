@@ -4,7 +4,7 @@ import react from "@astrojs/react";
 
 export default defineConfig({
   site: "https://abbas-talebi.github.io",
-  base: "/baqishelf-lab",
+  base: "/baqishelf-lab/",
 
   integrations: [
     react(),

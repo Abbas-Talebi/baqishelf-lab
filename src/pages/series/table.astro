@@ -3,6 +3,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import SeriesTable from "../../components/SeriesTable.astro";
 
+const base = import.meta.env.BASE_URL;
+
 const series =
   await getCollection("series");
 
@@ -20,13 +22,13 @@ const sortedSeries =
 
 <div class="view-switch">
 
-<a href="/series">
-  نمای کارت
-</a>
+  <a href={`${base}series`}>
+    نمای کارت
+  </a>
 
-<a href="/series/table">
-  نمای جدول
-</a>
+  <a href={`${base}series/table`}>
+    نمای جدول
+  </a>
 
 </div>
 
@@ -52,8 +54,6 @@ const sortedSeries =
   border-radius: 8px;
   text-decoration: none;
 }
-
-
 </style>
 
 </BaseLayout>

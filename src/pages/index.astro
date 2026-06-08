@@ -28,7 +28,7 @@ const allRatings = [
   ...series.map((item) => item.data.personal_rating),
   ...books.map((item) => item.data.personal_rating),
   ...music.map((item) => item.data.personal_rating),
-];
+].filter((rating) => typeof rating === "number");
 
 const ratingDistribution = {
   1:0,
@@ -187,11 +187,8 @@ const sortedTimeline =
         Number(b)
     );
 
-const timelineLabels =
-  Object.keys(timeline);
-
-const timelineValues =
-  Object.values(timeline);
+const timelineLabels = sortedTimeline.map(([year]) => year);
+const timelineValues = sortedTimeline.map(([, count]) => count);
 
 const favorites = [
 
@@ -310,9 +307,9 @@ const topRated = [
 
 const completedGames =
   games.filter(
-    (game) =>
-      game.data.completion_percentage
-  );
+  (game) =>
+    game.data.completion_percentage != null
+);
 
 const averageCompletion =
   completedGames.length > 0
@@ -480,7 +477,7 @@ const genreValues =
           {
             item.cover && (
               <img
-                src={`/covers/${item.cover}`}
+                src={`${import.meta.env.BASE_URL}covers/${item.cover}`}
                 alt={item.title}
               />
             )
@@ -837,7 +834,7 @@ const genreValues =
 
 </section>
 
-</BaseLayout>
+
 </BaseLayout>
 
 <style>
@@ -1150,19 +1147,6 @@ const genreValues =
     );
 }
 
-.achievement-fill {
-
-  height: 100%;
-
-  border-radius: inherit;
-
-  background:
-    linear-gradient(
-      90deg,
-      #10b981,
-      #34d399
-    );
-}
 
 .progress-text {
 

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Rating from "../components/Rating.astro";
 import { getCollection } from "astro:content";
 
 const games = await getCollection("games");
@@ -65,9 +66,18 @@ const monthNames = [
 ];
 const topMonth = topMonthEntry ? { name: monthNames[Number(topMonthEntry[0])], count: topMonthEntry[1] } : null;
 
-// نرخ تکمیل نسبت به کل بازی‌های موجود (اختیاری)
+// نرخ تکمیل نسبت به کل بازی‌های موجود
 const totalAllGames = games.length;
 const completionRate = totalAllGames > 0 ? ((totalGames / totalAllGames) * 100).toFixed(1) : 0;
+
+// نگاشت وضعیت (از کد خطادار)
+const statusMap = {
+  completed: "✓ تکمیل شده",
+  playing: "🎮 در حال تجربه",
+  backlog: "📚 در صف",
+  paused: "⏸ متوقف شده",
+  dropped: "✕ رها شده",
+};
 ---
 
 <BaseLayout title={`Replay ${currentYear}`}>
@@ -186,24 +196,96 @@ const completionRate = totalAllGames > 0 ? ((totalGames / totalAllGames) * 100).
         </div>
       )}
 
-      <!-- لیست بازی‌های مورد علاقه -->
-      {favoriteGames.length > 0 && (
-        <>
-          <h2>❤️ بازی‌های مورد علاقه من در {currentYear}</h2>
-          <ul class="favorite-list">
-            {favoriteGames.map((game) => (
-              <li>
+      <!-- لیست کامل بازی‌های سال با جزئیات (اضافه شده از کد خطادار) -->
+      <h2>📋 همه بازی‌های {currentYear}</h2>
+      <div class="games-list">
+        {yearGames.map((game) => (
+          <div class="game-card">
+            {game.data.cover && (
+              <img
+                src={`/covers/${game.data.cover}`}
+                alt={game.data.title}
+                class="game-cover-small"
+              />
+            )}
+            <div class="game-card-content">
+              <h3>
                 <a href={`/games/${game.id}`}>{game.data.title}</a>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+              </h3>
+              <div class="game-meta">
+                <div class="rating-line">
+                  <strong>امتیاز من:</strong>
+                  <Rating value={game.data.personal_rating} />
+                </div>
+                <p><strong>سال انتشار:</strong> {game.data.year}</p>
+                <p><strong>وضعیت:</strong> {statusMap[game.data.status] ?? game.data.status}</p>
+                <p><strong>تاریخ اتمام:</strong> {game.data.date_finished.toLocaleDateString("fa-IR")}</p>
+                
+                {game.data.completion_percentage !== undefined && (
+                  <div>
+                    <strong>پیشرفت:</strong>
+                    <div class="progress-bar">
+                      <div class="progress-fill" style={`width: ${game.data.completion_percentage}%`}></div>
+                    </div>
+                    <span>{game.data.completion_percentage}%</span>
+                  </div>
+                )}
+
+                {game.data.achievements_unlocked !== undefined && game.data.achievements_total !== undefined && (
+                  <p><strong>اچیومنت‌ها:</strong> {game.data.achievements_unlocked} / {game.data.achievements_total}</p>
+                )}
+
+                {game.data.platforms?.length > 0 && (
+                  <div class="badges">
+                    <strong>پلتفرم‌ها:</strong>
+                    {game.data.platforms.map(platform => (
+                      <span class="badge">{platform}</span>
+                    ))}
+                  </div>
+                )}
+
+                {game.data.genres?.length > 0 && (
+                  <div class="badges">
+                    <strong>ژانرها:</strong>
+                    {game.data.genres.map(genre => (
+                      <span class="badge">{genre}</span>
+                    ))}
+                  </div>
+                )}
+
+                {game.data.tags?.length > 0 && (
+                  <div class="badges">
+                    <strong>تگ‌ها:</strong>
+                    {game.data.tags.map(tag => (
+                      <span class="badge">{tag}</span>
+                    ))}
+                  </div>
+                )}
+
+                {game.data.summary && <p class="summary">{game.data.summary}</p>}
+
+                <!-- رتبه‌بندی جزئی (در صورت وجود) -->
+                {(game.data.story_rating || game.data.gameplay_rating || game.data.music_rating || game.data.graphics_rating || game.data.technical_rating) && (
+                  <details class="rating-details">
+                    <summary>جزئیات امتیازدهی</summary>
+                    {game.data.story_rating && <div>داستان: <Rating value={game.data.story_rating} /></div>}
+                    {game.data.gameplay_rating && <div>گیم‌پلی: <Rating value={game.data.gameplay_rating} /></div>}
+                    {game.data.music_rating && <div>موسیقی: <Rating value={game.data.music_rating} /></div>}
+                    {game.data.graphics_rating && <div>گرافیک: <Rating value={game.data.graphics_rating} /></div>}
+                    {game.data.technical_rating && <div>فنی: <Rating value={game.data.technical_rating} /></div>}
+                  </details>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </>
   )}
 </BaseLayout>
 
 <style>
+  /* استایل‌های قبلی + استایل‌های جدید برای کارت بازی‌ها */
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -275,33 +357,112 @@ const completionRate = totalAllGames > 0 ? ((totalGames / totalAllGames) * 100).
   .highlight-game h2 {
     margin: 0 0 0.5rem;
   }
-  .favorite-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.75rem;
-    list-style: none;
-    padding: 0;
+  .games-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
   }
-  .favorite-list li {
-    background: #0a0a0a;
+  .game-card {
+    display: flex;
+    gap: 1.5rem;
+    background: #0f0f0f;
     border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 1.5rem;
+    transition: transform 0.2s;
+  }
+  .game-card:hover {
+    transform: translateX(4px);
+    border-color: #8b5cf6;
+  }
+  .game-cover-small {
+    width: 120px;
+    height: auto;
     border-radius: 12px;
-    padding: 0.5rem 1rem;
-    text-align: center;
+    object-fit: cover;
   }
-  .favorite-list a {
-    text-decoration: none;
+  .game-card-content {
+    flex: 1;
+  }
+  .game-card-content h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+  }
+  .game-card-content h3 a {
     color: inherit;
+    text-decoration: none;
   }
-  .favorite-list a:hover {
+  .game-card-content h3 a:hover {
     color: #8b5cf6;
+  }
+  .game-meta p {
+    margin: 0.3rem 0;
+  }
+  .badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+  }
+  .badge {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+  }
+  .summary {
+    margin-top: 0.5rem;
+    opacity: 0.8;
+    font-size: 0.9rem;
+  }
+  .progress-bar {
+    width: 100%;
+    max-width: 200px;
+    height: 8px;
+    border-radius: 999px;
+    background: #222;
+    overflow: hidden;
+    margin: 0.3rem 0;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #8b5cf6;
+  }
+  .rating-details {
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: #0a0a0a;
+    border-radius: 12px;
+  }
+  .rating-details summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: #aaa;
+  }
+  .rating-details div {
+    margin: 0.3rem 0;
   }
   h1 {
     font-size: 2.2rem;
     margin-bottom: 1.5rem;
   }
   h2 {
-    font-size: 1.5rem;
-    margin: 1.5rem 0 1rem;
+    font-size: 1.8rem;
+    margin: 2rem 0 1rem;
+  }
+  @media (max-width: 700px) {
+    .game-card {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .game-cover-small {
+      width: 160px;
+    }
+    .badges {
+      justify-content: center;
+    }
   }
 </style>

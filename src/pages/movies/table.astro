@@ -3,6 +3,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import MovieTable from "../../components/MovieTable.astro";
 
+const base = import.meta.env.BASE_URL;
+
 const movies =
   await getCollection("movies");
 
@@ -20,11 +22,11 @@ const sortedMovies =
 
 <div class="view-switch">
 
-  <a href="/movies">
+  <a href={`${base}movies`}>
     نمای کارت
   </a>
 
-  <a href="/movies/table">
+  <a href={`${base}movies/table`}>
     نمای جدول
   </a>
 
@@ -52,8 +54,6 @@ const sortedMovies =
   border-radius: 8px;
   text-decoration: none;
 }
-
-
 </style>
 
 </BaseLayout>

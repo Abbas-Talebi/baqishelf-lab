@@ -4,6 +4,8 @@ import { getCollection } from "astro:content";
 import SeriesCard from "../components/SeriesCard.astro";
 import SearchBar from "../components/SearchBar.astro";
 
+const base = import.meta.env.BASE_URL;
+
 const series = await getCollection("series");
 
 const sortedSeries = [...series].sort(
@@ -17,8 +19,13 @@ const sortedSeries = [...series].sort(
   <SearchBar placeholder="جستجوی سریال..." />
 
   <div class="view-switch">
-    <a href="/series">نمای کارت</a>
-    <a href="/series/table">نمای جدول</a>
+    <a href={`${base}series`}>
+      نمای کارت
+    </a>
+
+    <a href={`${base}series/table`}>
+      نمای جدول
+    </a>
   </div>
 
   <p>تعداد سریال‌ها: {series.length}</p>
@@ -32,19 +39,37 @@ const sortedSeries = [...series].sort(
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const searchInput = document.getElementById("media-search");
-    const seriesContainer = document.getElementById("series-list");
+    const searchInput =
+      document.getElementById("media-search");
 
-    if (!searchInput || !seriesContainer) return;
+    const seriesContainer =
+      document.getElementById("series-list");
 
-    const getCards = () => [...document.querySelectorAll("#series-list .card")];
+    if (!searchInput || !seriesContainer)
+      return;
+
+    const getCards = () =>
+      [
+        ...document.querySelectorAll(
+          "#series-list .card"
+        ),
+      ];
 
     const applyFilter = () => {
-      const query = searchInput.value.trim().toLowerCase();
+      const query =
+        searchInput.value
+          .trim()
+          .toLowerCase();
 
       getCards().forEach((card) => {
-        const title = card.dataset.title?.toLowerCase() ?? "";
-        if (query && !title.includes(query)) {
+        const title =
+          card.dataset.title?.toLowerCase() ??
+          "";
+
+        if (
+          query &&
+          !title.includes(query)
+        ) {
           card.style.display = "none";
         } else {
           card.style.display = "";
@@ -52,8 +77,12 @@ const sortedSeries = [...series].sort(
       });
     };
 
-    searchInput.addEventListener("input", applyFilter);
-    applyFilter(); // اجرای اولیه
+    searchInput.addEventListener(
+      "input",
+      applyFilter
+    );
+
+    applyFilter();
   });
 </script>
 
@@ -63,12 +92,14 @@ const sortedSeries = [...series].sort(
     gap: 1rem;
     margin-bottom: 2rem;
   }
+
   .view-switch a {
     border: 1px solid #333;
     padding: 0.5rem 1rem;
     border-radius: 8px;
     text-decoration: none;
   }
+
   #series-list {
     display: flex;
     flex-direction: column;

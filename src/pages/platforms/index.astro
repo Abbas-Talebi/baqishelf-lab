@@ -2,6 +2,8 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 
+const base = import.meta.env.BASE_URL;
+
 const games = await getCollection("games");
 
 const platforms = [
@@ -22,7 +24,7 @@ const platforms = [
 {
   platforms.map((platform) => (
     <a
-      href={`/platforms/${platform
+      href={`${base}platforms/${platform
         .toLowerCase()
         .replaceAll(" ", "-")}`}
       class="platform-card"
@@ -34,25 +36,26 @@ const platforms = [
 
 </div>
 
-</BaseLayout>
-
 <style>
 .platform-grid {
   display: grid;
-
   grid-template-columns:
     repeat(auto-fit, minmax(220px, 1fr));
-
   gap: 1rem;
 }
 
 .platform-card {
   border: 1px solid #333;
-
   border-radius: 12px;
-
   padding: 1rem;
-
   text-decoration: none;
+  color: inherit;
+  transition: 0.2s;
+}
+
+.platform-card:hover {
+  transform: translateY(-2px);
 }
 </style>
+
+</BaseLayout>

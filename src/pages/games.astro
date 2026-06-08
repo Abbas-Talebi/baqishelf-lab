@@ -6,14 +6,28 @@ import SearchBar from "../components/SearchBar.astro";
 import StatsBar from "../components/StatsBar.astro";
 import FilterBar from "../components/FilterBar.astro";
 
+const base = import.meta.env.BASE_URL;
+
+const gamesUrl = `${base}games`;
+const gamesTableUrl = `${base}games/table`;
+
 const games = await getCollection("games");
 
-const completedGames = games.filter(game => game.data.status === "completed");
-const favoriteGames = games.filter(game => game.data.tags?.includes("favorite"));
-const playingGames = games.filter(game => game.data.status === "playing");
+const completedGames = games.filter(
+  (game) => game.data.status === "completed"
+);
 
-// مرتب‌سازی پیش‌فرض (امتیاز نزولی)
-const sortedGames = [...games].sort((a, b) => b.data.personal_rating - a.data.personal_rating);
+const favoriteGames = games.filter(
+  (game) => game.data.tags?.includes("favorite")
+);
+
+const playingGames = games.filter(
+  (game) => game.data.status === "playing"
+);
+
+const sortedGames = [...games].sort(
+  (a, b) => b.data.personal_rating - a.data.personal_rating
+);
 ---
 
 <BaseLayout title="بازی‌ها">
@@ -28,9 +42,14 @@ const sortedGames = [...games].sort((a, b) => b.data.personal_rating - a.data.pe
   
 
   <div class="view-switch">
-    <a href="/games">نمای کارت</a>
-    <a href="/games/table">نمای جدول</a>
-  </div>
+  <a href={gamesUrl}>
+    نمای کارت
+  </a>
+
+  <a href={gamesTableUrl}>
+    نمای جدول
+  </a>
+</div>
 
   <div class="stats-bar">
     <StatsBar

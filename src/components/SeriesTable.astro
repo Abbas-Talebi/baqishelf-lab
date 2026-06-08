@@ -3,6 +3,8 @@ import Rating from "./Rating.astro";
 
 const { series } = Astro.props;
 
+const base = import.meta.env.BASE_URL;
+
 const statusMap = {
   watched: "✓ تماشا شده",
   watching: "🎬 در حال تماشا",
@@ -19,45 +21,54 @@ const statusMap = {
       <th data-sort="number">امتیاز ↕</th>
       <th data-sort="number">سال ↕</th>
       <th data-sort="string">ژانر ↕</th>
-      <th>وضعیت</th>
+      <th data-sort="string">وضعیت ↕</th>
       <th data-sort="date">تاریخ تماشا ↕</th>
     </tr>
   </thead>
+
   <tbody>
     {
       series.map((item) => (
         <tr>
+
           <td>
             {
               item.data.cover && (
                 <img
-                  src={`/covers/${item.data.cover}`}
+                  src={`${base}covers/${item.data.cover}`}
                   alt={item.data.title}
                   class="cover"
                 />
               )
             }
           </td>
+
           <td data-value={item.data.title}>
-            <a href={`/series/${item.id}`}>
+            <a href={`${base}series/${item.id}`}>
               {item.data.title}
             </a>
           </td>
+
           <td data-value={item.data.personal_rating}>
             <Rating value={item.data.personal_rating} />
           </td>
+
           <td data-value={item.data.year}>
             {item.data.year}
           </td>
+
           <td data-value={item.data.genres?.join(", ") ?? ""}>
             {item.data.genres?.join("، ")}
           </td>
-          <td data-value={item.data.status}>
-            {statusMap[item.data.status]}
+
+          <td data-value={item.data.status ?? ""}>
+            {statusMap[item.data.status] ?? item.data.status}
           </td>
+
           <td data-value={item.data.date_watched?.getTime() ?? 0}>
             {item.data.date_watched?.toLocaleDateString("fa-IR")}
           </td>
+
         </tr>
       ))
     }
@@ -65,7 +76,6 @@ const statusMap = {
 </table>
 
 <script>
-  // اسکریپت مرتب‌سازی بدون تغییر
   document.addEventListener("DOMContentLoaded", () => {
     const table = document.querySelector(".item-table");
     if (!table) return;
@@ -78,6 +88,8 @@ const statusMap = {
 
       header.addEventListener("click", () => {
         const tbody = table.querySelector("tbody");
+        if (!tbody) return;
+
         const rows = Array.from(tbody.querySelectorAll("tr"));
 
         const columnIndex = header.cellIndex;
@@ -86,13 +98,17 @@ const statusMap = {
         rows.sort((a, b) => {
           const aCell = a.children[columnIndex];
           const bCell = b.children[columnIndex];
+
           let aVal = aCell?.dataset?.value ?? "";
           let bVal = bCell?.dataset?.value ?? "";
 
           if (sortType === "number" || sortType === "date") {
             aVal = Number(aVal);
             bVal = Number(bVal);
-            return ascending ? aVal - bVal : bVal - aVal;
+
+            return ascending
+              ? aVal - bVal
+              : bVal - aVal;
           }
 
           return ascending
@@ -108,25 +124,29 @@ const statusMap = {
 </script>
 
 <style>
-  /* استایل‌ها مثل قبل */
-  .item-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  .item-table th,
-  .item-table td {
-    padding: 0.75rem;
-    text-align: center;
-    vertical-align: middle;
-    border-bottom: 1px solid #2a2a2a;
-  }
-  .cover {
-    width: 60px;
-    height: 90px;
-    object-fit: cover;
-    border-radius: 6px;
-  }
-  .item-table td a {
-    text-decoration: none;
-  }
+.item-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.item-table th,
+.item-table td {
+  padding: 0.75rem;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.cover {
+  width: 60px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  margin: 0 auto;
+}
+
+.item-table td a {
+  text-decoration: none;
+}
 </style>

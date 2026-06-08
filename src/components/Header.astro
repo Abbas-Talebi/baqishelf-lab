@@ -1,14 +1,44 @@
+---
+const base = import.meta.env.BASE_URL;
+---
+
 <header>
   <nav>
-    <a href="/" title="آرشیو شخصی باقی">خانه</a>
-    <a href="/games">بازی‌ها</a>
-    <a href="/movies">فیلم‌ها</a>
-    <a href="/series">سریال‌ها</a>
-    <a href="/books">کتاب‌ها</a>
-    <a href="/music">موسیقی</a>
-    <a href="/stats">آمار</a>
-    <a href="/timeline">خط زمانی</a>
-    <a href="/replay">بازپخش سالانه</a>
+    <a href={base} title="آرشیو شخصی باقی">
+      خانه
+    </a>
+
+    <a href={`${base}games`}>
+      بازی‌ها
+    </a>
+
+    <a href={`${base}movies`}>
+      فیلم‌ها
+    </a>
+
+    <a href={`${base}series`}>
+      سریال‌ها
+    </a>
+
+    <a href={`${base}books`}>
+      کتاب‌ها
+    </a>
+
+    <a href={`${base}music`}>
+      موسیقی
+    </a>
+
+    <a href={`${base}stats`}>
+      آمار
+    </a>
+
+    <a href={`${base}timeline`}>
+      خط زمانی
+    </a>
+
+    <a href={`${base}replay`}>
+      بازپخش سالانه
+    </a>
   </nav>
 </header>
 
@@ -28,7 +58,7 @@
   }
 
   nav a {
-  text-decoration: none;
-  color: inherit;
-}
+    text-decoration: none;
+    color: inherit;
+  }
 </style>

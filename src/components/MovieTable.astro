@@ -3,6 +3,8 @@ import Rating from "./Rating.astro";
 
 const { movies } = Astro.props;
 
+const base = import.meta.env.BASE_URL;
+
 const statusMap = {
   watched: "✓ تماشا شده",
   watching: "🎬 در حال تماشا",
@@ -23,6 +25,7 @@ const statusMap = {
       <th data-sort="date">تاریخ تماشا ↕</th>
     </tr>
   </thead>
+
   <tbody>
     {
       movies.map((movie) => (
@@ -31,30 +34,36 @@ const statusMap = {
             {
               movie.data.cover && (
                 <img
-                  src={`/covers/${movie.data.cover}`}
+                  src={`${base}covers/${movie.data.cover}`}
                   alt={movie.data.title}
                   class="cover"
                 />
               )
             }
           </td>
+
           <td data-value={movie.data.title}>
-            <a href={`/movies/${movie.id}`}>
+            <a href={`${base}movies/${movie.id}`}>
               {movie.data.title}
             </a>
           </td>
+
           <td data-value={movie.data.personal_rating}>
             <Rating value={movie.data.personal_rating} />
           </td>
+
           <td data-value={movie.data.year}>
             {movie.data.year}
           </td>
+
           <td data-value={movie.data.genres?.join(", ") ?? ""}>
             {movie.data.genres?.join("، ")}
           </td>
-          <td>
+
+          <td data-value={movie.data.status}>
             {statusMap[movie.data.status]}
           </td>
+
           <td data-value={movie.data.date_watched?.getTime() ?? 0}>
             {movie.data.date_watched?.toLocaleDateString("fa-IR")}
           </td>
@@ -85,16 +94,19 @@ const statusMap = {
         rows.sort((a, b) => {
           const aCell = a.children[columnIndex];
           const bCell = b.children[columnIndex];
+
           let aVal = aCell?.dataset?.value ?? "";
           let bVal = bCell?.dataset?.value ?? "";
 
           if (sortType === "number" || sortType === "date") {
             aVal = Number(aVal);
             bVal = Number(bVal);
-            return ascending ? aVal - bVal : bVal - aVal;
+
+            return ascending
+              ? aVal - bVal
+              : bVal - aVal;
           }
 
-          // sortType === "string"
           return ascending
             ? String(aVal).localeCompare(String(bVal))
             : String(bVal).localeCompare(String(aVal));

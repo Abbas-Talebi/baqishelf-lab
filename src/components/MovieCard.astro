@@ -5,6 +5,8 @@ import Cover from "./Cover.astro";
 
 const { movie } = Astro.props;
 
+const base = import.meta.env.BASE_URL;
+
 const statusMap = {
   watched: "✓ Watched",
   watching: "🎬 Watching",
@@ -14,7 +16,7 @@ const statusMap = {
 ---
 
 <a
-  href={`/movies/${movie.id}`}
+  href={`${base}movies/${movie.id}`}
   class="card"
   data-title={movie.data.title}
   data-status={movie.data.status}
@@ -25,10 +27,10 @@ const statusMap = {
 >
 
   <Cover
-  src={`/covers/${movie.data.cover}`}
-  alt={movie.data.title}
-  type={movie.data.cover_type}
-/>
+    src={`${base}covers/${movie.data.cover}`}
+    alt={movie.data.title}
+    type={movie.data.cover_type}
+  />
 
   <div class="info">
 
@@ -89,7 +91,6 @@ const statusMap = {
 .card:hover {
   transform: translateY(-2px);
 }
-
 
 .info h2 {
   margin-top: 0;

@@ -3,8 +3,9 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import Rating from "../../components/Rating.astro";
 import { getCollection, render } from "astro:content";
 
-export async function getStaticPaths() {
+const base = import.meta.env.BASE_URL;
 
+export async function getStaticPaths() {
   const music =
     await getCollection("music");
 
@@ -16,7 +17,6 @@ export async function getStaticPaths() {
       music: item,
     },
   }));
-
 }
 
 const { music } = Astro.props;
@@ -38,7 +38,7 @@ const tags =
   {
     music.data.cover && (
       <img
-        src={`/covers/${music.data.cover}`}
+        src={`${base}covers/${music.data.cover}`}
         alt={music.data.title}
         class="music-cover"
       />
@@ -95,9 +95,14 @@ const tags =
 
           {
             music.data.date_listened
-              .toLocaleDateString(
-                "fa-IR"
-              )
+              .toLocaleDateString("fa-IR")
+          }
+
+          {" | "}
+
+          {
+            music.data.date_listened
+              .toLocaleDateString("en-GB")
           }
 
         </p>

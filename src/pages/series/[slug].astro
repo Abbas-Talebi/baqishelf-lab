@@ -3,6 +3,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import Rating from "../../components/Rating.astro";
 import { getCollection, render } from "astro:content";
 
+const base = import.meta.env.BASE_URL;
+
 const statusMap = {
   watched: "✓ تماشا شده",
   watching: "🎬 در حال تماشا",
@@ -13,14 +15,14 @@ const statusMap = {
 export async function getStaticPaths() {
   const series = await getCollection("series");
 
- return series.map((item) => ({
-  params: {
-    slug: item.id,
-  },
-  props: {
-    series: item,
-  },
-}));
+  return series.map((item) => ({
+    params: {
+      slug: item.id,
+    },
+    props: {
+      series: item,
+    },
+  }));
 }
 
 const { series } = Astro.props;
@@ -38,7 +40,7 @@ const tags = series.data.tags ?? [];
     {
       series.data.cover && (
         <img
-          src={`/covers/${series.data.cover}`}
+          src={`${base}covers/${series.data.cover}`}
           alt={series.data.title}
           class="series-cover"
         />
@@ -61,16 +63,17 @@ const tags = series.data.tags ?? [];
 
       <p>
         <strong>وضعیت:</strong>
-        {statusMap[series.data.status]}
+        {statusMap[series.data.status] ?? series.data.status}
       </p>
 
       {
-  series.data.date_finished && (
+        series.data.date_finished && (
           <p>
             <strong>تاریخ تماشا:</strong>
-            {series.data.date_watched.toLocaleDateString("fa-IR")}
+            {" "}
+            {series.data.date_finished.toLocaleDateString("fa-IR")}
             {" | "}
-            {series.data.date_watched.toLocaleDateString("en-GB")}
+            {series.data.date_finished.toLocaleDateString("en-GB")}
           </p>
         )
       }
@@ -116,7 +119,11 @@ const tags = series.data.tags ?? [];
     </div>
   </div>
 
-  <p>{series.data.summary}</p>
+  {
+    series.data.summary && (
+      <p>{series.data.summary}</p>
+    )
+  }
 
   <hr />
 
