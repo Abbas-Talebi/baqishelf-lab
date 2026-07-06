@@ -3,7 +3,7 @@ title: Black Bullet
 cover: seriess/black-bullet-2014.webp
 cover_type: poster
 personal_rating: 0
-status: completed
+status: watched
 year: 2014
 date_watched: 2025-05-11T00:00:00.000Z
 seasons: 1
