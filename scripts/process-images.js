@@ -72,8 +72,12 @@ async function processImages() {
 
           // تغییر سایز و تبدیل به webp
           await sharp(buffer)
-            .resize(isSquare ? 600 : 400, isSquare ? 600 : 600, { fit: "cover" })
-            .webp({ quality: 85 })
+            .resize(
+  isSquare ? 450 : 300,
+  isSquare ? 450 : 450,
+  { fit: "cover" }
+)
+            .webp({ quality: 80, effort: 6 })
             .toFile(coverAbsPath);
 
           console.log(`✅ Image saved: ${coverRelPath}`);

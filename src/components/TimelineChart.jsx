@@ -98,9 +98,9 @@ backgroundColor:
   return (
     <div
       style={{
-        maxWidth: "1000px",
+        width: "100%",
         height: "420px",
-        margin: "0 auto",
+        position: "relative",
       }}
     >
       <canvas ref={canvasRef} />

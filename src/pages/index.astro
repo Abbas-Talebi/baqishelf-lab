@@ -2,8 +2,6 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import GenreChart from "../components/GenreChart.jsx";
-import MediaChart from "../components/MediaChart.jsx";
-import RatingChart from "../components/RatingChart.jsx";
 import TimelineChart from "../components/TimelineChart.jsx";
 
 const base = import.meta.env.BASE_URL;
@@ -14,107 +12,95 @@ const series = await getCollection("series");
 const books = await getCollection("books");
 const music = await getCollection("music");
 
-const totalItems = games.length + movies.length + series.length + books.length + music.length;
+const allItems = [...games, ...movies, ...series, ...books, ...music];
+const totalItems = allItems.length;
 
-const allRatings = [
-  ...games.map((item) => item.data.personal_rating),
-  ...movies.map((item) => item.data.personal_rating),
-  ...series.map((item) => item.data.personal_rating),
-  ...books.map((item) => item.data.personal_rating),
-  ...music.map((item) => item.data.personal_rating),
-].filter((rating) => typeof rating === "number");
+// ==========================================
+// محاسبات امتیازها (برای هیستوگرام رنگی)
+// ==========================================
+const allRatings = allItems.map((item) => item.data.personal_rating).filter((r) => typeof r === "number" && r > 0);
+const averageRating = allRatings.length > 0 ? (allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length).toFixed(1) : "0.0";
 
-const ratingDistribution = { 1:0, 2:0, 3:0, 4:0, 5:0 };
+const ratingDist = { 5:0, 4:0, 3:0, 2:0, 1:0 };
+allRatings.forEach((r) => {
+  const rounded = Math.round(r);
+  if (ratingDist[rounded] !== undefined) ratingDist[rounded]++;
+});
+const maxRatingCount = Math.max(...Object.values(ratingDist), 1); 
 
-allRatings.forEach((rating) => {
-  const rounded = Math.round(rating);
-  if (ratingDistribution[rounded] !== undefined) {
-    ratingDistribution[rounded]++;
-  }
+// تابع تولید رنگ برای نوارهای امتیاز
+const getRatingColor = (star) => {
+  if (star === 5) return 'linear-gradient(90deg, #10b981, #34d399)'; // سبز
+  if (star === 4) return 'linear-gradient(90deg, #84cc16, #a3e635)'; // سبز روشن
+  if (star === 3) return 'linear-gradient(90deg, #eab308, #facc15)'; // زرد
+  if (star === 2) return 'linear-gradient(90deg, #f97316, #fb923c)'; // نارنجی
+  return 'linear-gradient(90deg, #ef4444, #f87171)'; // قرمز
+};
+
+// ==========================================
+// محاسبات وضعیت کلی آرشیو
+// ==========================================
+let statusCounts = { completed: 0, playing: 0, planned: 0 };
+allItems.forEach(item => {
+  const s = item.data.status;
+  if (['completed', 'watched', 'listened'].includes(s)) statusCounts.completed++;
+  else if (['playing', 'watching', 'reading', 'listening'].includes(s)) statusCounts.playing++;
+  else if (['planned', 'backlog'].includes(s)) statusCounts.planned++;
 });
 
-const ratingLabels = Object.keys(ratingDistribution);
-const ratingValues = Object.values(ratingDistribution);
+// ==========================================
+// آمار داشبوردها
+// ==========================================
+const completedGamesWithPercentage = games.filter(g => g.data.completion_percentage != null);
+const averageCompletion = completedGamesWithPercentage.length > 0 ? Math.round(completedGamesWithPercentage.reduce((sum, g) => sum + g.data.completion_percentage, 0) / completedGamesWithPercentage.length) : 0;
+const totalAchievementsUnlocked = games.reduce((sum, g) => sum + (g.data.achievements_unlocked ?? 0), 0);
+const totalAchievements = games.reduce((sum, g) => sum + (g.data.achievements_total ?? 0), 0);
+const totalCompletedGames = games.filter(g => g.data.status === 'completed').length; 
 
-const averageRating = allRatings.length > 0
-    ? (allRatings.reduce((sum, rating) => sum + rating, 0) / allRatings.length).toFixed(1)
-    : "0.0";
-
-const mediaCounts = [
-  { label: "🎮 بازی", count: games.length },
-  { label: "🎬 فیلم", count: movies.length },
-  { label: "📺 سریال", count: series.length },
-  { label: "📚 کتاب", count: books.length },
-  { label: "🎵 موسیقی", count: music.length },
-];
-
-const topMedia = [...mediaCounts].sort((a, b) => b.count - a.count)[0];
+const totalPages = books.reduce((sum, b) => sum + (b.data.pages ?? 0), 0);
   
-const recentEntries = [
-  ...games.filter((item) => item.data.date_finished).map((item) => ({
-      type: "game", title: item.data.title, date: item.data.date_finished, slug: `${base}games/${item.id}`,
-  })),
-  ...movies.filter((item) => item.data.date_watched).map((item) => ({
-      type: "movie", title: item.data.title, date: item.data.date_watched, slug: `${base}movies/${item.id}`,
-  })),
-  ...series.filter((item) => item.data.date_watched).map((item) => ({
-      type: "series", title: item.data.title, date: item.data.date_watched, slug: `${base}series/${item.id}`,
-  })),
-  ...books.filter((item) => item.data.date_finished).map((item) => ({
-      type: "book", title: item.data.title, date: item.data.date_finished, slug: `${base}books/${item.id}`,
-  })),
-  ...music.filter((item) => item.data.date_listened).map((item) => ({
-      type: "music", title: item.data.title, date: item.data.date_listened, slug: `${base}music/${item.id}`,
-  })),
-].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
+// ==========================================
+// محاسبات ژانرها (با قابلیت "سایرین")
+// ==========================================
+const genreCounts = {};
+allItems.forEach(item => {
+  item.data.genres?.forEach(genre => { genreCounts[genre] = (genreCounts[genre] ?? 0) + 1; });
+});
 
+const sortedGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
+const MAX_GENRES = 11; // تعداد ژانرهای اصلی که نمایش داده می‌شوند
+
+let finalGenres = sortedGenres.slice(0, MAX_GENRES);
+const othersCount = sortedGenres.slice(MAX_GENRES).reduce((sum, [, count]) => sum + count, 0);
+
+if (othersCount > 0) {
+  finalGenres.push(["سایرین", othersCount]);
+}
+
+const genreLabels = finalGenres.map(([genre]) => genre);
+const genreValues = finalGenres.map(([, count]) => count);
+
+// ==========================================
+// تایم‌لاین
+// ==========================================
 const timeline = {};
-
-[...games, ...movies, ...series, ...books, ...music].forEach((item) => {
+allItems.forEach(item => {
   const date = item.data.date_finished ?? item.data.date_watched ?? item.data.date_listened;
   if (!date) return;
   const year = date.getFullYear();
   timeline[year] = (timeline[year] ?? 0) + 1;
 });
-
 const sortedTimeline = Object.entries(timeline).sort(([a], [b]) => Number(a) - Number(b));
 const timelineLabels = sortedTimeline.map(([year]) => year);
 const timelineValues = sortedTimeline.map(([, count]) => count);
 
 // ==========================================
-// سیستم هوشمند و چرخشی "آثار محبوب"
+// لیست‌های رندوم و چرخشی
 // ==========================================
-
-// 1. استخراج تمام آثار محبوب به تفکیک مدیوم
-const favoriteGames = games.filter(item => item.data.tags?.includes("favorite")).map(item => ({
-  title: item.data.title, cover: item.data.cover, slug: `${base}games/${item.id}`, type: "🎮"
-}));
-const favoriteMovies = movies.filter(item => item.data.tags?.includes("favorite")).map(item => ({
-  title: item.data.title, cover: item.data.cover, slug: `${base}movies/${item.id}`, type: "🎬"
-}));
-const favoriteSeries = series.filter(item => item.data.tags?.includes("favorite")).map(item => ({
-  title: item.data.title, cover: item.data.cover, slug: `${base}series/${item.id}`, type: "📺"
-}));
-const favoriteBooks = books.filter(item => item.data.tags?.includes("favorite")).map(item => ({
-  title: item.data.title, cover: item.data.cover, slug: `${base}books/${item.id}`, type: "📚"
-}));
-const favoriteMusic = music.filter(item => item.data.tags?.includes("favorite")).map(item => ({
-  title: item.data.title, cover: item.data.cover, slug: `${base}music/${item.id}`, type: "🎵"
-}));
-
-// 2. تابع تولید "عدد تصادفی ثابت" بر اساس تاریخ (Seed-based Random)
-// این تابع باعث می‌شود در یک روز (یا هفته) خاص، همیشه یک خروجی ثابت داشته باشیم
 function getSeededRandom(seed) {
-  let x = Math.sin(seed++) * 10000;
-  return x - Math.floor(x);
+  let x = Math.sin(seed++) * 10000; return x - Math.floor(x);
 }
-
-// 3. تعیین بازه زمانی چرخش (Rotation)
-// الان روی "روزانه" تنظیم شده است. 
-// اگر می‌خواهید هفتگی باشد، عدد 86400000 را به 604800000 تغییر دهید.
 const timeSeed = Math.floor(Date.now() / 86400000); 
-
-// 4. تابع مخلوط کردن (Shuffle) یک آرایه بر اساس Seed
 function shuffleArray(array, seed) {
   let shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -124,289 +110,542 @@ function shuffleArray(array, seed) {
   return shuffled;
 }
 
-// 5. انتخاب 5 اثر از هر مدیوم (با استفاده از Shuffle روزانه)
-const selectedGames = shuffleArray(favoriteGames, timeSeed).slice(0, 6);
-const selectedMovies = shuffleArray(favoriteMovies, timeSeed + 1).slice(0, 6);
-const selectedSeries = shuffleArray(favoriteSeries, timeSeed + 2).slice(0, 5);
-const selectedBooks = shuffleArray(favoriteBooks, timeSeed + 3).slice(0, 3);
-const selectedMusic = shuffleArray(favoriteMusic, timeSeed + 4).slice(0, 5);
+const mapToCard = (arr, type) => arr.map(i => ({ title: i.data.title, cover: i.data.cover, slug: `${base}${type}s/${i.id}`, type, date: i.data.date_finished ?? i.data.date_watched ?? i.data.date_listened, rating: i.data.personal_rating, tags: i.data.tags || [] }));
 
-// 6. ترکیب همه 25 اثر و مخلوط کردن نهایی آن‌ها برای نمایش در صفحه
+const recentEntries = [
+  ...mapToCard(games.filter(i => i.data.date_finished), 'game'),
+  ...mapToCard(movies.filter(i => i.data.date_watched), 'movie'),
+  ...mapToCard(series.filter(i => i.data.date_watched), 'series'),
+  ...mapToCard(books.filter(i => i.data.date_finished), 'book'),
+  ...mapToCard(music.filter(i => i.data.date_listened), 'music')
+].sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 10);
+
 const allSelectedFavorites = [
-  ...selectedGames, 
-  ...selectedMovies, 
-  ...selectedSeries, 
-  ...selectedBooks, 
-  ...selectedMusic
+  ...shuffleArray(mapToCard(games, 'game').filter(i => i.tags.includes("favorite")), timeSeed).slice(0, 5), 
+  ...shuffleArray(mapToCard(movies, 'movie').filter(i => i.tags.includes("favorite")), timeSeed + 1).slice(0, 5), 
+  ...shuffleArray(mapToCard(series, 'series').filter(i => i.tags.includes("favorite")), timeSeed + 2).slice(0, 5), 
+  ...shuffleArray(mapToCard(books, 'book').filter(i => i.tags.includes("favorite")), timeSeed + 3).slice(0, 5), 
+  ...shuffleArray(mapToCard(music, 'music').filter(i => i.tags.includes("favorite")), timeSeed + 4).slice(0, 5)
 ];
-
 const favorites = shuffleArray(allSelectedFavorites, timeSeed + 5);
 
-// ==========================================
-// سیستم هوشمند و چرخشی "بهترین آثار (Top Rated)"
-// ==========================================
-
-// 1. استخراج تمام آثار با نمره بالا (مثلاً 4.5 به بالا) به تفکیک مدیوم
-// اگر می‌خواهید فقط نمرات 5 را نشان دهد، عدد 4.5 را به 5 تغییر دهید
 const MIN_RATING = 4.5;
-
-const topGames = games.filter(item => item.data.personal_rating >= MIN_RATING).map(item => ({
-  title: item.data.title, rating: item.data.personal_rating, slug: `${base}games/${item.id}`, type: "🎮"
-}));
-const topMovies = movies.filter(item => item.data.personal_rating >= MIN_RATING).map(item => ({
-  title: item.data.title, rating: item.data.personal_rating, slug: `${base}movies/${item.id}`, type: "🎬"
-}));
-const topSeries = series.filter(item => item.data.personal_rating >= MIN_RATING).map(item => ({
-  title: item.data.title, rating: item.data.personal_rating, slug: `${base}series/${item.id}`, type: "📺"
-}));
-const topBooks = books.filter(item => item.data.personal_rating >= MIN_RATING).map(item => ({
-  title: item.data.title, rating: item.data.personal_rating, slug: `${base}books/${item.id}`, type: "📚"
-}));
-const topMusic = music.filter(item => item.data.personal_rating >= MIN_RATING).map(item => ({
-  title: item.data.title, rating: item.data.personal_rating, slug: `${base}music/${item.id}`, type: "🎵"
-}));
-
-// 2. انتخاب 2 اثر برتر از هر مدیوم (با استفاده از Shuffle روزانه که قبلاً نوشتیم)
-// از همان timeSeed و shuffleArray که در بخش favorites تعریف کردیم استفاده می‌کنیم
-const selectedTopGames = shuffleArray(topGames, timeSeed + 10).slice(0, 2);
-const selectedTopMovies = shuffleArray(topMovies, timeSeed + 11).slice(0, 2);
-const selectedTopSeries = shuffleArray(topSeries, timeSeed + 12).slice(0, 2);
-const selectedTopBooks = shuffleArray(topBooks, timeSeed + 13).slice(0, 2);
-const selectedTopMusic = shuffleArray(topMusic, timeSeed + 14).slice(0, 2);
-
-// 3. ترکیب همه 10 اثر و مرتب‌سازی آن‌ها بر اساس نمره (از بیشترین به کمترین)
 const allSelectedTopRated = [
-  ...selectedTopGames, 
-  ...selectedTopMovies, 
-  ...selectedTopSeries, 
-  ...selectedTopBooks, 
-  ...selectedTopMusic
+  ...shuffleArray(mapToCard(games, 'game').filter(i => i.rating >= MIN_RATING), timeSeed + 10).slice(0, 2), 
+  ...shuffleArray(mapToCard(movies, 'movie').filter(i => i.rating >= MIN_RATING), timeSeed + 11).slice(0, 2), 
+  ...shuffleArray(mapToCard(series, 'series').filter(i => i.rating >= MIN_RATING), timeSeed + 12).slice(0, 2), 
+  ...shuffleArray(mapToCard(books, 'book').filter(i => i.rating >= MIN_RATING), timeSeed + 13).slice(0, 2), 
+  ...shuffleArray(mapToCard(music, 'music').filter(i => i.rating >= MIN_RATING), timeSeed + 14).slice(0, 2)
 ];
-
-// در اینجا به جای مخلوط کردن، آن‌ها را بر اساس نمره مرتب می‌کنیم تا منطق "بهترین‌ها" حفظ شود
 const topRated = allSelectedTopRated.sort((a, b) => b.rating - a.rating);
 
-const completedGames = games.filter((game) => game.data.completion_percentage != null);
-const averageCompletion = completedGames.length > 0
-    ? Math.round(completedGames.reduce((sum, game) => sum + game.data.completion_percentage, 0) / completedGames.length)
-    : 0;
-
-const totalAchievementsUnlocked = games.reduce((sum, game) => sum + (game.data.achievements_unlocked ?? 0), 0);
-const totalPages = books.reduce((sum, book) => sum + (book.data.pages ?? 0), 0);
-const totalAchievements = games.reduce((sum, game) => sum + (game.data.achievements_total ?? 0), 0);
-  
-const genreCounts = {};
-[...games, ...movies, ...series, ...books, ...music].forEach((item) => {
-  item.data.genres?.forEach((genre) => {
-      genreCounts[genre] = (genreCounts[genre] ?? 0) + 1;
-  });
-});
-
-const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
-const genreLabels = topGenres.map(([genre]) => genre);
-const genreValues = topGenres.map(([, count]) => count);
+const getTypeIcon = (type) => {
+  switch(type) { case 'game': return '🎮'; case 'movie': return '🎬'; case 'series': return '📺'; case 'book': return '📚'; case 'music': return '🎵'; default: return '📌'; }
+};
 ---
 
 <BaseLayout title="آرشیو شخصی باقی">
 
-<section class="hero">
-  <h1>BaqiShelf</h1>
-  <p class="hero-text">کتابخانه شخصی من برای ثبت بازی‌ها، فیلم‌ها، سریال‌ها، کتاب‌ها و موسیقی.</p>
-</section>
-
-<section>
-  <h2>آخرین آثار ثبت‌شده</h2>
-  <div class="recent-list">
-    {recentEntries.map((item) => (
-        <a href={item.slug} class="recent-item">
-          <span>{item.type === "game" ? "🎮" : item.type === "movie" ? "🎬" : item.type === "series" ? "📺" : item.type === "book" ? "📚" : "🎵"}</span>
-          <span>{item.title}</span>
-          <span class="date">{item.date.toLocaleDateString("fa-IR")}</span>
-        </a>
-    ))}
-  </div>
-</section>
-
-<section>
-  <h2>★ آثار محبوب</h2>
-  <div class="favorites-grid">
-    {favorites.map((item) => (
-        <a href={item.slug} class="favorite-card">
-          {item.cover && <img src={`${base}covers/${item.cover}`} alt={item.title} />}
-          <div class="favorite-info">
-            <span>{item.type}</span>
-            <strong>{item.title}</strong>
-          </div>
-        </a>
-    ))}
-  </div>
-</section>
-
-<section>
-<h2>🏆 بهترین آثار</h2>
-<div class="top-rated-list">
-{topRated.map((item) => (
-    <a href={item.slug} class="top-rated-item">
-      <span>{item.type}</span>
-      <span>{item.title}</span>
-      <strong>{item.rating}/5</strong>
-    </a>
-))}
-</div>
-</section>
-
-<section>
-  <h2 class="section-title">🎮 داشبورد بازی‌ها</h2>
-  <div class="game-dashboard">
-    <div class="dashboard-card">
-      <div class="card-header">
-        <span class="icon">🏁</span>
-        <span>میانگین Completion</span>
-      </div>
-      <div class="big-number">{averageCompletion}%</div>
-      <div class="progress-bar">
-        <div class="progress-fill" style={`width:${averageCompletion}%`}></div>
+  <!-- Hero Section -->
+  <section class="main-hero">
+    <div class="hero-glow glow-1"></div>
+    <div class="hero-glow glow-2"></div>
+    
+    <div class="hero-content">
+      <h1>BaqiShelf</h1>
+      <p>کتابخانه شخصی من برای ثبت و نقد فیلم‌ها، سریال‌ها، بازی‌ها، کتاب‌ها و موسیقی.</p>
+      
+      <div class="hero-stats">
+        <div class="stat-badge">
+          <span class="stat-num">{totalItems}</span>
+          <span class="stat-text">اثر ثبت شده</span>
+        </div>
+        <div class="stat-badge">
+          <span class="stat-num">⭐{averageRating}</span>
+          <span class="stat-text">میانگین نمرات</span>
+        </div>
       </div>
     </div>
-    <div class="dashboard-card">
-      <div class="card-header">
-        <span class="icon">🏆</span>
-        <span>اچیومنت‌ها</span>
-      </div>
-      <div class="big-number">
-        {totalAchievementsUnlocked}
-        <span class="separator">/</span>
-        {totalAchievements}
-      </div>
-      <div class="progress-bar">
-        <div class="achievement-fill" style={`width:${totalAchievements > 0 ? (totalAchievementsUnlocked / totalAchievements) * 100 : 0}%`}></div>
-      </div>
-      <div class="progress-text">{totalAchievements > 0 ? Math.round((totalAchievementsUnlocked / totalAchievements) * 100) : 0}%</div>
-    </div>
-  </div>
-</section>
+  </section>
 
-<section>
-  <div class="section-header">
-    <h2>🎭 ژانرهای محبوب</h2>
-    <span class="section-subtitle">پرمصرف‌ترین ژانرهای آرشیو</span>
-  </div>
-  <div class="genre-grid">
-    {topGenres.map(([genre, count], index) => (
-          <div class="genre-card">
-            <div class="genre-rank">#{index + 1}</div>
-            <h3>{genre}</h3>
-            <div class="genre-count">{count}</div>
-            <span class="genre-label">اثر ثبت شده</span>
+  <!-- Horizontal Scroll Sections -->
+  <section class="slider-section">
+    <div class="section-header"><h2>✨ آخرین آثار ثبت‌شده</h2></div>
+    <div class="horizontal-scroll">
+      {recentEntries.map((item) => (
+        <a href={item.slug} class="media-card">
+          <div class="card-image-wrapper">
+            {item.cover && <div class="blur-bg" style={`background-image: url('${base}covers/${item.cover}')`}></div>}
+            {item.cover ? (
+              <img src={`${base}covers/${item.cover}`} alt={item.title} class={`card-img ${item.type === 'music' ? 'square' : ''}`} loading="lazy" decoding="async" />
+            ) : (
+              <div class="no-image">{getTypeIcon(item.type)}</div>
+            )}
+            <div class="card-type-badge">{getTypeIcon(item.type)}</div>
           </div>
-    ))}
-  </div>
-</section>
+          <div class="card-info">
+            <h3 title={item.title}>{item.title}</h3>
+            <span class="card-date">{item.date.toLocaleDateString("fa-IR")}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
 
-<section>
-  <h2>📊 توزیع ژانرها</h2>
-  <GenreChart client:load labels={genreLabels} values={genreValues} />
-</section>
+  <section class="slider-section">
+    <div class="section-header">
+      <h2>❤️ آثار محبوب من</h2>
+      <span class="subtitle">ترکیبی تصادفی از بهترین تجربه‌های من</span>
+    </div>
+    <div class="horizontal-scroll">
+      {favorites.map((item) => (
+        <a href={item.slug} class="media-card">
+          <div class="card-image-wrapper">
+            {item.cover && <div class="blur-bg" style={`background-image: url('${base}covers/${item.cover}')`}></div>}
+            {item.cover ? (
+              <img src={`${base}covers/${item.cover}`} alt={item.title} class={`card-img ${item.type === 'music' ? 'square' : ''}`} loading="lazy" decoding="async" />
+            ) : (
+              <div class="no-image">{getTypeIcon(item.type)}</div>
+            )}
+            <div class="card-type-badge">{getTypeIcon(item.type)}</div>
+          </div>
+          <div class="card-info">
+            <h3 title={item.title}>{item.title}</h3>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
 
-<section>
-<h2>⭐ توزیع امتیازها</h2>
-<RatingChart client:load labels={ratingLabels} values={ratingValues} />
-</section>
+  <section class="slider-section">
+    <div class="section-header"><h2>🏆 بالاترین نمرات</h2></div>
+    <div class="horizontal-scroll">
+      {topRated.map((item) => (
+        <a href={item.slug} class="media-card">
+          <div class="card-image-wrapper">
+            {item.cover && <div class="blur-bg" style={`background-image: url('${base}covers/${item.cover}')`}></div>}
+            {item.cover ? (
+              <img src={`${base}covers/${item.cover}`} alt={item.title} class={`card-img ${item.type === 'music' ? 'square' : ''}`} loading="lazy" decoding="async" />
+            ) : (
+              <div class="no-image">{getTypeIcon(item.type)}</div>
+            )}
+            <div class="card-rating-badge">⭐ {item.rating}</div>
+          </div>
+          <div class="card-info">
+            <h3 title={item.title}>{item.title}</h3>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
 
-<section class="stats-grid">
-  <div class="stat-card">
-    <h3>مجموع آثار</h3>
-    <p>{totalItems}</p>
-  </div>
-  <div class="stat-card">
-    <h3>میانگین امتیاز</h3>
-    <p>{averageRating} / 5</p>
-  </div>
-  <div class="stat-card">
-    <h3>بزرگ‌ترین آرشیو</h3>
-    <p>{topMedia.label}</p>
-  </div>
-</section>
+  <!-- Dashboards Grid -->
+  <section class="dashboards-container">
+    <h2>📊 مرکز آمار</h2>
+    
+    <div class="dashboard-grid">
+      
+      <!-- Game Stats -->
+      <div class="glass-card">
+        <div class="card-header"><span class="icon">🎮</span><span>داشبورد بازی‌ها</span></div>
+        
+        <div class="stat-row">
+          <span>میانگین تکمیل:</span>
+          <strong>{averageCompletion}%</strong>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style={`width:${averageCompletion}%`}></div></div>
+        
+        <div class="stat-row" style="margin-top: 1.2rem;">
+          <span>اچیومنت‌ها:</span>
+          <strong>{totalAchievementsUnlocked} / {totalAchievements}</strong>
+        </div>
+        <div class="progress-bar"><div class="achievement-fill" style={`width:${totalAchievements > 0 ? (totalAchievementsUnlocked / totalAchievements) * 100 : 0}%`}></div></div>
 
-<section>
-<h2>📚 داشبورد کتاب‌ها</h2>
-<div class="dashboard-grid">
-<div>
-<h3>مجموع صفحات</h3>
-<p>{totalPages}</p>
-</div>
-<div>
-<h3>کتاب‌ها</h3>
-<p>{books.length}</p>
-</div>
-</div>
-</section>
+        <div class="stat-row" style="margin-top: 1.2rem;">
+          <span>بازی‌های تمام شده:</span>
+          <strong>{totalCompletedGames} / {games.length}</strong>
+        </div>
+        <div class="progress-bar"><div class="completed-fill" style={`width:${games.length > 0 ? (totalCompletedGames / games.length) * 100 : 0}%`}></div></div>
+      </div>
 
-<section>
-  <h2>آمار مدیوم‌ها</h2>
-  <div class="media-grid">
-    <div>🎮 {games.length} بازی</div>
-    <div>🎬 {movies.length} فیلم</div>
-    <div>📺 {series.length} سریال</div>
-    <div>📚 {books.length} کتاب</div>
-    <div>🎵 {music.length} موسیقی</div>
-  </div>
-</section>
+      <!-- Book Stats -->
+      <div class="glass-card">
+        <div class="card-header"><span class="icon">📚</span><span>داشبورد کتاب‌ها</span></div>
+        <div class="big-stat">
+          <span class="number">{totalPages.toLocaleString()}</span>
+          <span class="label">صفحه خوانده شده</span>
+        </div>
+        <div class="stat-row" style="margin-top: 1rem;">
+          <span>تعداد کتاب‌ها:</span>
+          <strong>{books.length} عدد</strong>
+        </div>
+      </div>
 
-<section>
-<h2>📅 تاریخچه فعالیت</h2>
-<TimelineChart client:load labels={timelineLabels} values={timelineValues} />
-</section>
+      <!-- Media Distribution -->
+      <div class="glass-card">
+        <div class="card-header"><span class="icon">📦</span><span>ترکیب آرشیو</span></div>
+        <div class="media-list">
+          <div class="media-item"><span>🎮 بازی</span> <strong>{games.length}</strong></div>
+          <div class="media-item"><span>🎬 فیلم</span> <strong>{movies.length}</strong></div>
+          <div class="media-item"><span>📺 سریال</span> <strong>{series.length}</strong></div>
+          <div class="media-item"><span>📚 کتاب</span> <strong>{books.length}</strong></div>
+          <div class="media-item"><span>🎵 موسیقی</span> <strong>{music.length}</strong></div>
+        </div>
+      </div>
 
-<section>
-<h2>📊 ترکیب آرشیو</h2>
-<MediaChart client:load labels={["Games", "Movies", "Series", "Books", "Music"]} values={[games.length, movies.length, series.length, books.length, music.length]} />
-</section>
+    </div>
+  </section>
+
+  <!-- Charts Section (3 Columns on Desktop, Equal Height) -->
+  <section class="charts-container">
+    
+    <div class="chart-box equal-box">
+      <h2>🎭 توزیع ژانرها</h2>
+      <div class="chart-content-wrapper">
+        <GenreChart client:load labels={genreLabels} values={genreValues} />
+      </div>
+    </div>
+    
+    <!-- هیستوگرام جدید و مدرن امتیازها -->
+    <div class="chart-box equal-box">
+      <h2>⭐ توزیع امتیازها</h2>
+      <div class="chart-content-wrapper rating-histogram">
+        {[5, 4, 3, 2, 1].map(star => {
+          const count = ratingDist[star];
+          const percentage = (count / maxRatingCount) * 100;
+          return (
+            <div class="histogram-row">
+              <div class="stars-wrapper">
+                <span class="star-icon">★</span>
+                <span class="star-number">{star}</span>
+              </div>
+              <div class="bar-container">
+                <div class="bar-fill" style={`width: ${percentage}%; background: ${getRatingColor(star)}`}></div>
+              </div>
+              <span class="count">{count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    <!-- وضعیت کلی آرشیو -->
+    <div class="chart-box equal-box">
+      <h2>📌 وضعیت کلی آرشیو</h2>
+      <div class="chart-content-wrapper status-overview">
+        <div class="status-item completed">
+          <div class="icon">✓</div>
+          <div class="info">
+            <span class="label">تکمیل / تماشا شده</span>
+            <span class="value">{statusCounts.completed} اثر</span>
+          </div>
+        </div>
+        <div class="status-item playing">
+          <div class="icon">▶</div>
+          <div class="info">
+            <span class="label">در حال تجربه</span>
+            <span class="value">{statusCounts.playing} اثر</span>
+          </div>
+        </div>
+        <div class="status-item planned">
+          <div class="icon">📋</div>
+          <div class="info">
+            <span class="label">در صف / برنامه</span>
+            <span class="value">{statusCounts.planned} اثر</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-box full-width">
+      <h2>📅 تاریخچه فعالیت (سالانه)</h2>
+      <TimelineChart client:load labels={timelineLabels} values={timelineValues} />
+    </div>
+  </section>
 
 </BaseLayout>
 
 <style>
-.hero { text-align: center; margin-bottom: 3rem; }
-.hero h1 { font-size: 3rem; margin-bottom: 1rem; }
-.hero-text { font-size: 1.1rem; opacity: 0.8; max-width: 600px; margin: 0 auto; }
-.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 3rem; }
-.stat-card { border: 1px solid #333; border-radius: 12px; padding: 1.25rem; text-align: center; }
-.stat-card h3 { margin-top: 0; }
-.stat-card p { font-size: 1.5rem; margin-bottom: 0; }
-.media-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
-.media-grid div { border: 1px solid #333; border-radius: 12px; padding: 1rem; text-align: center; }
-.recent-list { display: flex; flex-direction: column; gap: 0.75rem; }
-.recent-item { display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; border-radius: 10px; padding: 0.9rem 1rem; text-decoration: none; color: inherit; }
-.recent-item:hover { transform: translateY(-2px); }
-.date { opacity: 0.7; font-size: 0.9rem; }
-.favorites-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-top: 1rem; }
-.favorite-card { border: 1px solid #333; border-radius: 12px; overflow: hidden; text-decoration: none; color: inherit; }
-.favorite-card img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; }
-.favorite-info { padding: 0.75rem; }
-.dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
-.dashboard-grid > div { border: 1px solid #333; border-radius: 12px; padding: 1rem; }
-.top-rated-list { display: flex; flex-direction: column; gap: .75rem; }
-.top-rated-item { display: flex; justify-content: space-between; border: 1px solid #333; border-radius: 10px; padding: .9rem 1rem; text-decoration: none; color: inherit; }
-.achievement-bar { width: 100%; height: 12px; background: #222; border-radius: 999px; overflow: hidden; margin-top: .75rem; }
-.achievement-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #10b981, #34d399); }
-.section-title { margin-bottom: 1rem; }
-.game-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
-.dashboard-card { background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)); border: 1px solid #2f2f2f; border-radius: 18px; padding: 1.25rem; backdrop-filter: blur(8px); transition: all .25s ease; }
-.dashboard-card:hover { transform: translateY(-3px); border-color: #4a4a4a; }
-.card-header { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; opacity: .85; }
-.icon { font-size: 1.2rem; }
-.big-number { font-size: 2rem; font-weight: 700; margin-bottom: 1rem; }
-.separator { opacity: .4; }
-.progress-bar { width: 100%; height: 12px; background: #1d1d1d; border-radius: 999px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-.progress-text { text-align: center; margin-top: .75rem; opacity: .75; font-size: .9rem; }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
-.section-subtitle { opacity: .6; font-size: .9rem; }
-.genre-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 1rem; }
-.genre-card { position: relative; border: 1px solid #2f2f2f; border-radius: 18px; padding: 1.25rem; text-align: center; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)); transition: transform .25s ease, border-color .25s ease; }
-.genre-card:hover { transform: translateY(-4px); border-color: #555; }
-.genre-rank { position: absolute; top: .75rem; left: .75rem; font-size: .8rem; opacity: .5; }
-.genre-card h3 { margin-top: .5rem; margin-bottom: .75rem; font-size: 1.1rem; }
-.genre-count { font-size: 2rem; font-weight: 700; line-height: 1; }
-.genre-label { display: block; margin-top: .5rem; opacity: .6; font-size: .85rem; }
+  /* =========================================
+     Hero Section
+     ========================================= */
+  .main-hero {
+    position: relative;
+    background: #0a0a0a;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 24px;
+    padding: 5rem 2rem;
+    text-align: center;
+    margin-bottom: 4rem;
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    filter: blur(100px);
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  .glow-1 { top: -100px; left: -50px; background: rgba(139, 92, 246, 0.6); }
+  .glow-2 { bottom: -100px; right: -50px; background: rgba(59, 130, 246, 0.4); }
+
+  .hero-content { position: relative; z-index: 1; }
+
+  .main-hero h1 {
+    font-size: 4rem;
+    font-weight: 900;
+    margin: 0 0 1rem 0;
+    background: linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+  }
+
+  .hero-text { font-size: 1.2rem; color: #a3a3a3; max-width: 600px; margin: 0 auto 2.5rem auto; line-height: 1.6; }
+
+  .hero-stats { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
+
+  .stat-badge {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 1rem 2rem;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+
+  .stat-num { font-size: 1.8rem; font-weight: 800; color: #fff; }
+  .stat-text { font-size: 0.9rem; color: #888; margin-top: 0.2rem; }
+
+  /* =========================================
+     Horizontal Sliders (With Custom Scrollbar)
+     ========================================= */
+  .slider-section { margin-bottom: 4rem; }
+  .section-header { margin-bottom: 1.5rem; display: flex; align-items: baseline; gap: 1rem; }
+  .section-header h2 { margin: 0; font-size: 1.6rem; }
+  .subtitle { opacity: 0.5; font-size: 0.9rem; }
+
+  .horizontal-scroll {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 1rem; /* فضا برای اسکرول‌بار */
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* اسکرول‌بار اختصاصی و زیبا برای کامپیوتر */
+  .horizontal-scroll::-webkit-scrollbar {
+    height: 8px;
+  }
+  .horizontal-scroll::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+  }
+  .horizontal-scroll::-webkit-scrollbar-thumb {
+    background: rgba(139, 92, 246, 0.4);
+    border-radius: 10px;
+  }
+  .horizontal-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.8);
+  }
+
+  .media-card {
+    min-width: 150px;
+    max-width: 150px;
+    scroll-snap-align: start;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease;
+  }
+  .media-card:hover { transform: translateY(-6px); }
+
+  .card-image-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #1a1a1a;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+    border: 1px solid #2a2a2a;
+  }
+
+  .blur-bg {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(15px) brightness(0.4);
+    z-index: 1;
+  }
+
+  .card-img {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .card-img.square {
+    object-fit: contain;
+    padding: 10px;
+  }
+
+  .no-image { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.2; position: relative; z-index: 2; }
+
+  .card-type-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(8px);
+    padding: 6px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    z-index: 3;
+    line-height: 1;
+  }
+
+  .card-rating-badge {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    z-index: 3;
+  }
+
+  .card-info {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+  .card-info h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #eee;
+  line-height: 1.35;
+  text-align: center;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  overflow: hidden;
+}
+  .card-date { font-size: 0.8rem; color: #888; }
+
+  /* =========================================
+     Dashboards & Stats
+     ========================================= */
+  .dashboards-container { margin-bottom: 4rem; }
+  .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+
+  .glass-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px solid #2f2f2f;
+    border-radius: 18px;
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .card-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.5rem; font-weight: bold; color: #c4b5fd; font-size: 1.1rem; }
+  .stat-row { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 0.5rem; color: #ddd; }
+  
+  .progress-bar { width: 100%; height: 6px; background: #222; border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .achievement-fill { height: 100%; background: linear-gradient(90deg, #10b981, #34d399); }
+  .completed-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #c4b5fd); }
+
+  .big-stat { display: flex; flex-direction: column; align-items: center; padding: 1rem 0; }
+  .big-stat .number { font-size: 2.8rem; font-weight: 900; color: #fff; }
+  .big-stat .label { font-size: 0.9rem; color: #888; }
+
+  .media-list { display: flex; flex-direction: column; gap: 0.8rem; }
+  .media-item { display: flex; justify-content: space-between; padding-bottom: 0.5rem; border-bottom: 1px solid #222; font-size: 0.95rem; color: #ccc; }
+  .media-item:last-child { border-bottom: none; }
+
+  /* =========================================
+     Charts (3 Columns, Equal Height)
+     ========================================= */
+  .charts-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .chart-box {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 18px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* کلاس جادویی برای هم‌اندازه کردن ۳ ستون */
+  .equal-box {
+    height: 100%;
+  }
+
+  .chart-content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .chart-box h2 { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.2rem; text-align: center; color: #eee; }
+  .full-width { grid-column: 1 / -1; }
+
+  /* هیستوگرام جدید امتیازها */
+  .rating-histogram { display: flex; flex-direction: column; gap: 1rem; padding: 0.5rem 0; }
+  .histogram-row { display: flex; align-items: center; gap: 1rem; }
+  
+  .stars-wrapper { display: flex; align-items: center; gap: 0.3rem; width: 40px; justify-content: flex-end; }
+  .star-icon { color: #fbbf24; font-size: 1.1rem; }
+  .star-number { font-weight: bold; font-size: 1.1rem; color: #fff; }
+  
+  .bar-container { flex: 1; height: 14px; background: #222; border-radius: 6px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width 1s ease-out; box-shadow: 0 0 10px rgba(255,255,255,0.1); }
+  .count { width: 35px; text-align: left; font-size: 1rem; color: #aaa; font-weight: bold; }
+
+  /* لیست وضعیت کلی آرشیو */
+  .status-overview { display: flex; flex-direction: column; gap: 1rem; }
+  .status-item { display: flex; align-items: center; gap: 1rem; padding: 1rem; border-radius: 12px; background: #1a1a1a; border: 1px solid #222; transition: transform 0.2s; }
+  .status-item:hover { transform: translateX(-5px); }
+  .status-item .icon { width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; font-weight: bold; }
+  .status-item.completed .icon { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+  .status-item.playing .icon { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
+  .status-item.planned .icon { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2); }
+  .status-item .info { display: flex; flex-direction: column; }
+  .status-item .label { font-size: 0.9rem; color: #888; }
+  .status-item .value { font-size: 1.3rem; font-weight: bold; color: #fff; }
+
+  /* =========================================
+     Mobile Responsive
+     ========================================= */
+  @media (max-width: 768px) {
+    .main-hero { padding: 3rem 1.5rem; }
+    .main-hero h1 { font-size: 2.8rem; }
+    .section-header { flex-direction: column; gap: 0.2rem; }
+    .media-card { min-width: 130px; max-width: 130px; }
+    .charts-container { grid-template-columns: 1fr; }
+  }
 </style>

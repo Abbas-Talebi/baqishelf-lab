@@ -5,200 +5,133 @@ import { getCollection, render } from "astro:content";
 
 const base = import.meta.env.BASE_URL;
 
-export async function getStaticPaths() {
-  const music =
-    await getCollection("music");
+const statusMap = {
+  listened: "✓ شنیده شده",
+  listening: "🎧 در حال شنیدن",
+  planned: "📋 برنامه",
+};
 
+export async function getStaticPaths() {
+  const music = await getCollection("music");
   return music.map((item) => ({
-    params: {
-      slug: item.id,
-    },
-    props: {
-      music: item,
-    },
+    params: { slug: item.id },
+    props: { musicItem: item },
   }));
 }
 
-const { music } = Astro.props;
+const { musicItem } = Astro.props;
+const { Content } = await render(musicItem);
 
-const { Content } =
-  await render(music);
-
-const genres =
-  music.data.genres ?? [];
-
-const tags =
-  music.data.tags ?? [];
+const genres = musicItem.data.genres ?? [];
+const tags = musicItem.data.tags ?? [];
+const coverUrl = musicItem.data.cover ? `${base}covers/${musicItem.data.cover}` : '';
 ---
 
-<BaseLayout title={music.data.title}>
+<BaseLayout title={musicItem.data.title}>
 
-<div class="music-header">
+  <div class="hero-banner" style={coverUrl ? `background-image: url('${coverUrl}')` : ''}>
+    <div class="hero-overlay">
+      <div class="hero-content">
+        
+        {musicItem.data.cover && (
+          <img src={coverUrl} alt={musicItem.data.title} class="hero-cover square" />
+        )}
 
-  {
-    music.data.cover && (
-      <img
-        src={`${base}covers/${music.data.cover}`}
-        alt={music.data.title}
-        class="music-cover"
-      />
-    )
-  }
+        <div class="hero-info">
+          <h1>{musicItem.data.title}</h1>
 
-  <div class="music-info">
+          <div class="meta-row">
+            <span class="year">{musicItem.data.year}</span>
+            <span class="status-badge">{statusMap[musicItem.data.status] ?? musicItem.data.status}</span>
+          </div>
 
-    <h1>
-      {music.data.title}
-    </h1>
+          <div class="rating-box">
+            <strong>امتیاز شخصی:</strong>
+            <Rating value={musicItem.data.personal_rating} />
+          </div>
 
-    {
-      music.data.artist && (
-        <p>
-          <strong>
-            هنرمند:
-          </strong>
+          <div class="details-grid">
+            {musicItem.data.artist && <p><strong>هنرمند:</strong> {musicItem.data.artist}</p>}
+            {musicItem.data.date_started && <p><strong>تاریخ شروع:</strong> {musicItem.data.date_started.toLocaleDateString("fa-IR")}</p>}
+            {musicItem.data.date_listened && <p><strong>تاریخ شنیدن:</strong> {musicItem.data.date_listened.toLocaleDateString("fa-IR")}</p>}
+          </div>
 
-          {music.data.artist}
-        </p>
-      )
-    }
+          {genres.length > 0 && (
+            <div class="badges-section">
+              <strong>ژانرها:</strong>
+              <div class="badges">
+                {genres.map((genre) => <span class="badge genre-badge">{genre}</span>)}
+              </div>
+            </div>
+          )}
 
-    <div>
+          {tags.length > 0 && (
+            <div class="badges-section">
+              <strong>تگ‌ها:</strong>
+              <div class="badges">
+                {tags.map((tag) => <span class="badge tag-badge">#{tag}</span>)}
+              </div>
+            </div>
+          )}
 
-      <strong>
-        امتیاز شخصی:
-      </strong>
-
-      <Rating
-        value={music.data.personal_rating}
-      />
-
+        </div>
+      </div>
     </div>
-
-    <p>
-
-      <strong>
-        سال انتشار:
-      </strong>
-
-      {music.data.year}
-
-    </p>
-
-    {
-      music.data.date_listened && (
-        <p>
-
-          <strong>
-            تاریخ شنیدن:
-          </strong>
-
-          {
-            music.data.date_listened
-              .toLocaleDateString("fa-IR")
-          }
-
-          {" | "}
-
-          {
-            music.data.date_listened
-              .toLocaleDateString("en-GB")
-          }
-
-        </p>
-      )
-    }
-
   </div>
 
-</div>
+  {musicItem.data.summary && (
+    <div class="summary-box">
+      <h3>نظر کوتاه:</h3>
+      <p>{musicItem.data.summary}</p>
+    </div>
+  )}
 
-<div>
-
-  <strong>
-    ژانرها:
-  </strong>
-
-  <div class="badges">
-
-    {
-      genres.map((genre) => (
-        <span class="badge">
-          {genre}
-        </span>
-      ))
-    }
-
+  <div class="markdown-content">
+    <Content />
   </div>
-
-</div>
-
-<div>
-
-  <strong>
-    تگ‌ها:
-  </strong>
-
-  <div class="badges">
-
-    {
-      tags.map((tag) => (
-        <span class="badge">
-          {tag}
-        </span>
-      ))
-    }
-
-  </div>
-
-</div>
-
-  <hr />
-
-{
-  music.data.summary && (
-    <p>
-      {music.data.summary}
-    </p>
-  )
-}
-
-<hr />
-
-<Content />
-
-<style>
-
-.music-header {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-.music-cover {
-  width: 260px;
-  max-width: 100%;
-  border-radius: 12px;
-}
-
-.music-info {
-  flex: 1;
-}
-
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.badge {
-  border: 1px solid #333;
-  border-radius: 999px;
-  padding: 0.25rem 0.75rem;
-}
-
-</style>
 
 </BaseLayout>
+
+<style>
+  .hero-banner { width: 100%; border-radius: 20px; overflow: hidden; margin-bottom: 2rem; background-size: cover; background-position: center; background-color: #1a1a1a; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .hero-overlay { background: linear-gradient(90deg, rgba(17,17,17,1) 0%, rgba(17,17,17,0.85) 50%, rgba(17,17,17,0.6) 100%); backdrop-filter: blur(15px); padding: 3rem; }
+  .hero-content { display: flex; gap: 3rem; align-items: flex-start; }
+  
+  /* استایل اختصاصی برای کاور مربعی موسیقی */
+  .hero-cover.square { width: 280px; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); flex-shrink: 0; }
+  
+  .hero-info { flex: 1; display: flex; flex-direction: column; gap: 1.2rem; min-width: 0; }
+  .hero-info h1 { margin: 0; font-size: 2.5rem; line-height: 1.3; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+  
+  .meta-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+  .year { font-size: 1.2rem; opacity: 0.8; }
+  .status-badge { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid #8b5cf6; padding: 0.2rem 0.8rem; border-radius: 999px; font-size: 0.9rem; }
+  
+  .rating-box { background: rgba(0,0,0,0.3); padding: 0.8rem 1.2rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 1rem; width: fit-content; border: 1px solid rgba(255,255,255,0.1); }
+  
+  .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 12px; }
+  .details-grid p { margin: 0; font-size: 0.95rem; line-height: 1.5; }
+  .details-grid strong { color: #a0a0a0; display: block; margin-bottom: 0.3rem; }
+
+  .badges-section { display: flex; flex-direction: column; gap: 0.5rem; }
+  .badges-section strong { color: #a0a0a0; font-size: 0.9rem; }
+  .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .badge { padding: 0.3rem 0.8rem; border-radius: 6px; font-size: 0.85rem; }
+  .genre-badge { background: #2a2a2a; border: 1px solid #444; }
+  .tag-badge { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+  .summary-box { background: #1a1a1a; border-right: 4px solid #8b5cf6; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; }
+  .summary-box h3 { margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem; }
+  .summary-box p { margin: 0; opacity: 0.9; line-height: 1.8; }
+  .markdown-content { line-height: 1.8; font-size: 1.05rem; }
+
+  @media (max-width: 768px) {
+    .hero-overlay { background: linear-gradient(0deg, rgba(17,17,17,1) 0%, rgba(17,17,17,0.95) 50%, rgba(17,17,17,0.6) 100%); padding: 2rem 1.5rem; }
+    .hero-content { flex-direction: column; align-items: center; text-align: center; gap: 1.5rem; }
+    .hero-cover.square { width: 200px; }
+    .meta-row { justify-content: center; }
+    .rating-box { margin: 0 auto; }
+    .badges { justify-content: center; }
+    .details-grid { grid-template-columns: 1fr; text-align: right; }
+  }
+</style>

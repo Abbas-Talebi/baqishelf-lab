@@ -14,161 +14,279 @@ const statusMap = {
 
 export async function getStaticPaths() {
   const movies = await getCollection("movies");
-
   return movies.map((movie) => ({
-    params: {
-      slug: movie.id,
-    },
-    props: {
-      movie,
-    },
+    params: { slug: movie.id },
+    props: { movie },
   }));
 }
 
 const { movie } = Astro.props;
-
 const { Content } = await render(movie);
 
 const genres = movie.data.genres ?? [];
 const tags = movie.data.tags ?? [];
+
+// مسیر عکس برای پس‌زمینه
+const coverUrl = movie.data.cover ? `${base}covers/${movie.data.cover}` : '';
 ---
 
 <BaseLayout title={movie.data.title}>
 
-  <div class="movie-header">
+  <!-- هدر حرفه‌ای با پس‌زمینه تار -->
+  <div class="hero-banner" style={coverUrl ? `background-image: url('${coverUrl}')` : ''}>
+    <div class="hero-overlay">
+      <div class="hero-content">
+        
+        {movie.data.cover && (
+          <img src={coverUrl} alt={movie.data.title} class="hero-cover" />
+        )}
 
-    {
-      movie.data.cover && (
-        <img
-          src={`${base}covers/${movie.data.cover}`}
-          alt={movie.data.title}
-          class="movie-cover"
-        />
-      )
-    }
+        <div class="hero-info">
+          <h1>{movie.data.title}</h1>
 
-    <div class="movie-info">
+          <div class="meta-row">
+            <span class="year">{movie.data.year}</span>
+            <span class="status-badge">{statusMap[movie.data.status] ?? movie.data.status}</span>
+          </div>
 
-      <h1>{movie.data.title}</h1>
+          <div class="rating-box">
+            <strong>امتیاز شخصی:</strong>
+            <Rating value={movie.data.personal_rating} />
+          </div>
 
-      <div>
-        <strong>امتیاز شخصی:</strong>
-        <Rating value={movie.data.personal_rating} />
+          <div class="details-grid">
+            {movie.data.director && (
+              <p><strong>کارگردان:</strong> {movie.data.director}</p>
+            )}
+            {movie.data.runtime && (
+              <p><strong>مدت زمان:</strong> {movie.data.runtime} دقیقه</p>
+            )}
+            {movie.data.date_watched && (
+              <p><strong>تاریخ تماشا:</strong> {movie.data.date_watched.toLocaleDateString("fa-IR")}</p>
+            )}
+          </div>
+
+          {genres.length > 0 && (
+            <div class="badges-section">
+              <strong>ژانرها:</strong>
+              <div class="badges">
+                {genres.map((genre) => <span class="badge genre-badge">{genre}</span>)}
+              </div>
+            </div>
+          )}
+
+          {tags.length > 0 && (
+            <div class="badges-section">
+              <strong>تگ‌ها:</strong>
+              <div class="badges">
+                {tags.map((tag) => <span class="badge tag-badge">#{tag}</span>)}
+              </div>
+            </div>
+          )}
+
+        </div>
       </div>
-
-      <p>
-        <strong>سال انتشار:</strong>
-        {movie.data.year}
-      </p>
-
-      <p>
-        <strong>وضعیت:</strong>
-        {statusMap[movie.data.status] ?? movie.data.status}
-      </p>
-
-      {
-        movie.data.date_watched && (
-          <p>
-            <strong>تاریخ تماشا:</strong>
-            {" "}
-            {movie.data.date_watched.toLocaleDateString("fa-IR")}
-            {" | "}
-            {movie.data.date_watched.toLocaleDateString("en-GB")}
-          </p>
-        )
-      }
-
-      {
-        movie.data.director && (
-          <p>
-            <strong>کارگردان:</strong>
-            {movie.data.director}
-          </p>
-        )
-      }
-
-    </div>
-
-  </div>
-
-  <div>
-    <strong>ژانرها:</strong>
-
-    <div class="badges">
-      {
-        genres.map((genre) => (
-          <span class="badge">
-            {genre}
-          </span>
-        ))
-      }
     </div>
   </div>
 
-  <div>
-    <strong>تگ‌ها:</strong>
-
-    <div class="badges">
-      {
-        tags.map((tag) => (
-          <span class="badge">
-            {tag}
-          </span>
-        ))
-      }
-    </div>
-  </div>
-
-  <hr />
-
-  {
-    movie.data.summary && (
+  {movie.data.summary && (
+    <div class="summary-box">
+      <h3>نظر کوتاه:</h3>
       <p>{movie.data.summary}</p>
-    )
+    </div>
+  )}
+
+  <div class="markdown-content">
+    <Content />
+  </div>
+
+</BaseLayout>
+
+<style>
+  /* =========================================
+     استایل‌های هدر حرفه‌ای (Desktop First)
+     ========================================= */
+  .hero-banner {
+    width: 100%;
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+    background-size: cover;
+    background-position: center;
+    background-color: #1a1a1a; /* رنگ پیش‌فرض در صورت نبود عکس */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
   }
 
-  <hr />
+  .hero-overlay {
+    /* یک گرادیانت تیره که روی عکس پس‌زمینه می‌افتد تا متن‌ها خوانا باشند */
+    background: linear-gradient(90deg, rgba(17,17,17,1) 0%, rgba(17,17,17,0.85) 50%, rgba(17,17,17,0.6) 100%);
+    backdrop-filter: blur(15px); /* تار کردن پس‌زمینه */
+    padding: 3rem;
+  }
 
-  <Content />
+  .hero-content {
+    display: flex;
+    gap: 3rem;
+    align-items: flex-start;
+  }
 
+  .hero-cover {
+    width: 280px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+    flex-shrink: 0;
+  }
 
+  .hero-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
 
-  <style>
-    .movie-header {
-      display: flex;
-      gap: 2rem;
-      align-items: flex-start;
-      margin-bottom: 2rem;
+  .hero-info h1 {
+    margin: 0;
+    font-size: 2.5rem;
+    line-height: 1.2;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .year {
+    font-size: 1.2rem;
+    opacity: 0.8;
+  }
+
+  .status-badge {
+    background: rgba(139, 92, 246, 0.2);
+    color: #c4b5fd;
+    border: 1px solid #8b5cf6;
+    padding: 0.2rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+  }
+
+  .rating-box {
+    background: rgba(0,0,0,0.3);
+    padding: 0.8rem 1.2rem;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    width: fit-content;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    background: rgba(0,0,0,0.2);
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-top: 0.5rem;
+  }
+
+  .details-grid p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .details-grid strong {
+    color: #a0a0a0;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  .badges-section {
+    margin-top: 0.5rem;
+  }
+
+  .badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+
+  .badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+
+  .genre-badge {
+    background: #2a2a2a;
+    border: 1px solid #444;
+  }
+
+  .tag-badge {
+    background: rgba(16, 185, 129, 0.1);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+
+  .summary-box {
+    background: #1a1a1a;
+    border-right: 4px solid #8b5cf6;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+  }
+
+  .summary-box h3 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+  }
+
+  .summary-box p {
+    margin: 0;
+    opacity: 0.9;
+    line-height: 1.8;
+  }
+
+  .markdown-content {
+    line-height: 1.8;
+    font-size: 1.05rem;
+  }
+
+  /* =========================================
+     استایل‌های مخصوص موبایل (Responsive)
+     ========================================= */
+  @media (max-width: 768px) {
+    .hero-overlay {
+      /* در موبایل گرادیانت از پایین به بالا می‌شود */
+      background: linear-gradient(0deg, rgba(17,17,17,1) 0%, rgba(17,17,17,0.9) 60%, rgba(17,17,17,0.4) 100%);
+      padding: 2rem 1.5rem;
     }
 
-    .movie-info {
-      flex: 1;
+    .hero-content {
+      flex-direction: column; /* عکس می‌رود بالای متن */
+      align-items: center;
+      text-align: center;
+      gap: 1.5rem;
     }
 
-    .movie-info h1 {
-      margin-top: 0;
+    .hero-cover {
+      width: 180px; /* عکس در موبایل کوچکتر می‌شود */
     }
 
-    .movie-cover {
-      width: 240px;
-      max-width: 100%;
-      border-radius: 12px;
+    .meta-row {
+      justify-content: center;
+    }
+
+    .rating-box {
+      margin: 0 auto;
     }
 
     .badges {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin-top: 0.5rem;
-      margin-bottom: 1rem;
+      justify-content: center;
     }
-
-    .badge {
-      border: 1px solid #333;
-      padding: 0.25rem 0.75rem;
-      border-radius: 999px;
-      font-size: 0.9rem;
-    }
-  </style>
-
-</BaseLayout>
+  }
+</style>
