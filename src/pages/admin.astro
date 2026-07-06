@@ -1,0 +1,12 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AdminUI from "../components/AdminUI.jsx";
+
+// خواندن کلیدها از فایل .env
+const tmdbKey = import.meta.env.TMDB_API_KEY || "";
+const rawgKey = import.meta.env.RAWG_API_KEY || ""; // برای بازی‌ها (اختیاری)
+---
+
+<BaseLayout title="پنل مدیریت">
+  <AdminUI client:only="react" tmdbKey={tmdbKey} rawgKey={rawgKey} />
+</BaseLayout>

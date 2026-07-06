@@ -4,61 +4,55 @@ const base = import.meta.env.BASE_URL;
 
 <header>
   <nav>
-    <a href={base} title="آرشیو شخصی باقی">
-      خانه
-    </a>
-
-    <a href={`${base}games`}>
-      بازی‌ها
-    </a>
-
-    <a href={`${base}movies`}>
-      فیلم‌ها
-    </a>
-
-    <a href={`${base}series`}>
-      سریال‌ها
-    </a>
-
-    <a href={`${base}books`}>
-      کتاب‌ها
-    </a>
-
-    <a href={`${base}music`}>
-      موسیقی
-    </a>
-
-    <a href={`${base}stats`}>
-      آمار
-    </a>
-
-    <a href={`${base}timeline`}>
-      خط زمانی
-    </a>
-
-    <a href={`${base}replay`}>
-      بازپخش سالانه
-    </a>
+    <a href={base} title="آرشیو شخصی باقی">خانه</a>
+    <a href={`${base}games`}>بازی‌ها</a>
+    <a href={`${base}movies`}>فیلم‌ها</a>
+    <a href={`${base}series`}>سریال‌ها</a>
+    <a href={`${base}books`}>کتاب‌ها</a>
+    <a href={`${base}music`}>موسیقی</a>
+    <a href={`${base}stats`}>آمار</a>
+    <a href={`${base}timeline`}>خط زمانی</a>
+    <a href={`${base}replay`}>بازپخش سالانه</a>
   </nav>
 </header>
 
 <style>
   header {
     border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
 
   nav {
     max-width: 1200px;
     margin: 0 auto;
     padding: 1rem 2rem;
-
     display: flex;
     gap: 1.5rem;
     align-items: center;
+    
+    /* تنظیمات مخصوص موبایل برای جلوگیری از بیرون زدن منو */
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch; /* اسکرول نرم در آیفون */
+    scrollbar-width: none; /* مخفی کردن نوار اسکرول در فایرفاکس */
+  }
+
+  /* مخفی کردن نوار اسکرول در کروم و سافاری */
+  nav::-webkit-scrollbar {
+    display: none;
   }
 
   nav a {
     text-decoration: none;
     color: inherit;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+
+  nav a:hover {
+    color: #8b5cf6; /* رنگ بنفش هنگام هاور */
   }
 </style>

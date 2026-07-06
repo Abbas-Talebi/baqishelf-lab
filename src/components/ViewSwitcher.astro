@@ -1,0 +1,28 @@
+---
+interface Props {
+  basePath: string;
+}
+const { basePath } = Astro.props;
+---
+<div class="view-switch">
+  <a href={basePath}>نمای کارت</a>
+  <a href={`${basePath}/table`}>نمای جدول</a>
+</div>
+
+<style>
+  .view-switch {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .view-switch a {
+    border: 1px solid var(--border, #333);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .view-switch a:hover {
+    background: #222;
+  }
+</style>

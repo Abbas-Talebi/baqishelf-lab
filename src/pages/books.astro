@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import BookCard from "../components/BookCard.astro";
 import SearchBar from "../components/SearchBar.astro";
+import ViewSwitcher from "../components/ViewSwitcher.astro";
 
 const base = import.meta.env.BASE_URL;
 
@@ -18,19 +19,41 @@ const sortedBooks = [...books].sort(
 
   <SearchBar placeholder="جستجوی کتاب..." />
 
-  <div class="view-switch">
-    <a href={`${base}books`}>
-      نمای کارت
-    </a>
+  <div class="filters">
+    <select id="status-filter">
+      <option value="">همه وضعیت‌ها</option>
+      <option value="completed">خوانده شده</option>
+      <option value="reading">در حال مطالعه</option>
+      <option value="planned">برنامه مطالعه</option>
+      <option value="dropped">رها شده</option>
+    </select>
 
-    <a href={`${base}books/table`}>
-      نمای جدول
-    </a>
+    <select id="tag-filter">
+  <option value="">همه تگ‌ها</option>
+  <option value="favorite">Favorite</option>
+  <option value="masterpiece">Masterpiece</option>
+  <option value="hidden-gem">Hidden Gem</option>
+  <option value="Bullshit">Bullshit</option>
+</select>
+
+    <select id="sort-filter">
+      <option value="rating-desc">امتیاز ↓</option>
+      <option value="rating-asc">امتیاز ↑</option>
+      <option value="year-desc">سال انتشار ↓</option>
+      <option value="year-asc">سال انتشار ↑</option>
+      <option value="date-desc">تاریخ مطالعه ↓</option>
+      <option value="date-asc">تاریخ مطالعه ↑</option>
+    </select>
   </div>
 
-  <p>تعداد کتاب‌ها: {books.length}</p>
+  <ViewSwitcher basePath={`${base}books`} />
 
-  <div id="books-list">
+  <p>
+    تعداد کتاب‌ها:
+    <span id="item-count">{books.length}</span>
+  </p>
+
+  <div id="media-list">
     {sortedBooks.map((book) => (
       <BookCard book={book} />
     ))}
@@ -39,70 +62,147 @@ const sortedBooks = [...books].sort(
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const searchInput =
-      document.getElementById("media-search");
+    const searchInput = document.getElementById("media-search");
+    const statusSelect = document.getElementById("status-filter");
+    const tagSelect = document.getElementById("tag-filter");
+    const sortSelect = document.getElementById("sort-filter");
+    const mediaList = document.getElementById("media-list");
+    const countDisplay = document.getElementById("item-count");
 
-    const booksContainer =
-      document.getElementById("books-list");
-
-    if (!searchInput || !booksContainer)
-      return;
+    if (!mediaList) return;
 
     const getCards = () =>
-      [
-        ...document.querySelectorAll(
-          "#books-list .card"
-        ),
-      ];
+      [...document.querySelectorAll("#media-list .card")];
 
-    const applyFilter = () => {
+    const applyFiltersAndSort = () => {
       const query =
-        searchInput.value
-          .trim()
-          .toLowerCase();
+        searchInput?.value.trim().toLowerCase() ?? "";
 
-      getCards().forEach((card) => {
+      const status =
+        statusSelect?.value ?? "";
+
+      const tag =
+        tagSelect?.value ?? "";
+
+      const sortValue =
+        sortSelect?.value ?? "rating-desc";
+
+      let visibleCount = 0;
+
+      const cards = getCards();
+
+      cards.forEach((card) => {
         const title =
-          card.dataset.title?.toLowerCase() ??
-          "";
+          card.dataset.title?.toLowerCase() ?? "";
 
-        if (
-          query &&
-          !title.includes(query)
-        ) {
-          card.style.display = "none";
-        } else {
-          card.style.display = "";
+        const cardStatus =
+          card.dataset.status ?? "";
+
+        const cardTags =
+          (card.dataset.tags ?? "").split(",");
+
+        let visible = true;
+
+        if (query && !title.includes(query))
+          visible = false;
+
+        if (status && cardStatus !== status)
+          visible = false;
+
+        if (tag && !cardTags.includes(tag))
+          visible = false;
+
+        card.style.display =
+          visible ? "" : "none";
+
+        if (visible)
+          visibleCount++;
+      });
+
+      if (countDisplay)
+        countDisplay.textContent =
+          visibleCount.toString();
+
+      const visibleCards =
+        cards.filter(
+          (card) => card.style.display !== "none"
+        );
+
+      visibleCards.sort((a, b) => {
+        switch (sortValue) {
+          case "rating-desc":
+            return Number(b.dataset.rating) - Number(a.dataset.rating);
+
+          case "rating-asc":
+            return Number(a.dataset.rating) - Number(b.dataset.rating);
+
+          case "year-desc":
+            return Number(b.dataset.year) - Number(a.dataset.year);
+
+          case "year-asc":
+            return Number(a.dataset.year) - Number(b.dataset.year);
+
+          case "date-desc":
+            return Number(b.dataset.date) - Number(a.dataset.date);
+
+          case "date-asc":
+            return Number(a.dataset.date) - Number(b.dataset.date);
+
+          default:
+            return 0;
         }
       });
+
+      visibleCards.forEach((card) =>
+        mediaList.appendChild(card)
+      );
     };
 
-    searchInput.addEventListener(
+    const handleChange = () =>
+      requestAnimationFrame(applyFiltersAndSort);
+
+    searchInput?.addEventListener(
       "input",
-      applyFilter
+      handleChange
     );
 
-    applyFilter();
+    statusSelect?.addEventListener(
+      "change",
+      handleChange
+    );
+
+    tagSelect?.addEventListener(
+      "change",
+      handleChange
+    );
+
+    sortSelect?.addEventListener(
+      "change",
+      handleChange
+    );
   });
 </script>
 
 <style>
-  .view-switch {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
+.filters {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
 
-  .view-switch a {
-    border: 1px solid #333;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    text-decoration: none;
-  }
+.filters select {
+  background: #111;
+  color: white;
+  border: 1px solid #333;
+  padding: 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
 
-  #books-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
+#media-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
 </style>

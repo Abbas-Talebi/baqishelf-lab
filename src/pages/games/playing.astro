@@ -1,1 +1,19 @@
-status === "playing"
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import GameCard from "../../components/GameCard.astro";
+
+const games = await getCollection("games");
+const playingGames = games.filter((game) => game.data.status === "playing");
+---
+
+<BaseLayout title="در حال تجربه">
+  <h1>بازی‌های در حال تجربه</h1>
+  <p>{playingGames.length} بازی</p>
+
+  <div id="games-list">
+    {playingGames.map((game) => (
+      <GameCard game={game} />
+    ))}
+  </div>
+</BaseLayout>

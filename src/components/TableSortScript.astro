@@ -1,0 +1,42 @@
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const tables = document.querySelectorAll("table.sortable-table");
+    
+    tables.forEach(table => {
+      const headers = table.querySelectorAll("th[data-sort]");
+      
+      headers.forEach(header => {
+        let ascending = true;
+        (header as HTMLElement).style.cursor = "pointer";
+
+        header.addEventListener("click", () => {
+          const tbody = table.querySelector("tbody");
+          if (!tbody) return;
+
+          const rows = Array.from(tbody.querySelectorAll("tr"));
+          const columnIndex = (header as HTMLTableCellElement).cellIndex;
+          const sortType = (header as HTMLElement).dataset.sort;
+
+          rows.sort((a, b) => {
+            const aCell = a.children[columnIndex] as HTMLElement;
+            const bCell = b.children[columnIndex] as HTMLElement;
+
+            let aVal = aCell?.dataset?.value ?? "";
+            let bVal = bCell?.dataset?.value ?? "";
+
+            if (sortType === "number" || sortType === "date") {
+              return ascending ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
+            }
+
+            return ascending
+              ? String(aVal).localeCompare(String(bVal))
+              : String(bVal).localeCompare(String(aVal));
+          });
+
+          ascending = !ascending;
+          tbody.replaceChildren(...rows);
+        });
+      });
+    });
+  });
+</script>

@@ -3,27 +3,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import GameCard from "../components/GameCard.astro";
 import SearchBar from "../components/SearchBar.astro";
-import StatsBar from "../components/StatsBar.astro";
-import FilterBar from "../components/FilterBar.astro";
+import ViewSwitcher from "../components/ViewSwitcher.astro";
 
 const base = import.meta.env.BASE_URL;
-
-const gamesUrl = `${base}games`;
-const gamesTableUrl = `${base}games/table`;
-
 const games = await getCollection("games");
-
-const completedGames = games.filter(
-  (game) => game.data.status === "completed"
-);
-
-const favoriteGames = games.filter(
-  (game) => game.data.tags?.includes("favorite")
-);
-
-const playingGames = games.filter(
-  (game) => game.data.status === "playing"
-);
 
 const sortedGames = [...games].sort(
   (a, b) => b.data.personal_rating - a.data.personal_rating
@@ -31,197 +14,152 @@ const sortedGames = [...games].sort(
 ---
 
 <BaseLayout title="بازی‌ها">
+  <h1>بازی‌ها</h1>
 
-<h1>بازی‌ها</h1>
+  <SearchBar placeholder="جستجوی بازی..." />
 
-  <SearchBar
-  placeholder="جستجوی بازی..."
-/>
-  <FilterBar />
+  <div class="filters">
+    <select id="status-filter">
+      <option value="">همه وضعیت‌ها</option>
+      <option value="completed">تمام شده</option>
+      <option value="playing">در حال بازی</option>
+      <option value="planned">برنامه بازی</option>
+      <option value="dropped">رها شده</option>
+    </select>
 
-  
+    <select id="tag-filter">
+  <option value="">همه تگ‌ها</option>
+  <option value="favorite">Favorite</option>
+  <option value="masterpiece">Masterpiece</option>
+  <option value="hidden-gem">Hidden Gem</option>
+  <option value="Bullshit">Bullshit</option>
+</select>
 
-  <div class="view-switch">
-  <a href={gamesUrl}>
-    نمای کارت
-  </a>
-
-  <a href={gamesTableUrl}>
-    نمای جدول
-  </a>
-</div>
-
-  <div class="stats-bar">
-    <StatsBar
-      total={games.length}
-      completed={completedGames.length}
-      playing={playingGames.length}
-      favorite={favoriteGames.length}
-    />
+    <select id="sort-filter">
+      <option value="rating-desc">امتیاز ↓</option>
+      <option value="rating-asc">امتیاز ↑</option>
+      <option value="year-desc">سال انتشار ↓</option>
+      <option value="year-asc">سال انتشار ↑</option>
+      <option value="date-desc">تاریخ اتمام ↓</option>
+      <option value="date-asc">تاریخ اتمام ↑</option>
+    </select>
   </div>
 
+  <ViewSwitcher basePath={`${base}games`} />
 
-  <div id="games-list">
-    {sortedGames.map(game => <GameCard game={game} />)}
+  <p>تعداد بازی‌ها: <span id="item-count">{games.length}</span></p>
+
+  <div id="media-list">
+    {sortedGames.map((game) => (
+      <GameCard game={game} />
+    ))}
   </div>
 </BaseLayout>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    // عناصر DOM
-    const searchInput =
-  document.getElementById(
-    "media-search"
-  );
+    const searchInput = document.getElementById("media-search");
     const statusSelect = document.getElementById("status-filter");
     const tagSelect = document.getElementById("tag-filter");
     const sortSelect = document.getElementById("sort-filter");
-    const gamesList = document.getElementById("games-list");
+    const mediaList = document.getElementById("media-list");
+    const countDisplay = document.getElementById("item-count");
 
-    if (!gamesList) return;
+    if (!mediaList) return;
 
-    // دریافت کارت‌ها (live collection)
-    const getCards = () => [...document.querySelectorAll("#games-list .card")];
+    const getCards = () => [...document.querySelectorAll("#media-list .card")];
 
-    // اعمال فیلترها (جستجو، وضعیت، تگ)
-    const applyFilters = () => {
+    const applyFiltersAndSort = () => {
       const query = searchInput?.value.trim().toLowerCase() ?? "";
       const status = statusSelect?.value ?? "";
       const tag = tagSelect?.value ?? "";
+      const sortValue = sortSelect?.value ?? "rating-desc";
 
-      for (const card of getCards()) {
+      let visibleCount = 0;
+      const cards = getCards();
+
+      cards.forEach((card) => {
         const title = card.dataset.title?.toLowerCase() ?? "";
         const cardStatus = card.dataset.status ?? "";
         const cardTags = (card.dataset.tags ?? "").split(",");
 
         let visible = true;
+
         if (query && !title.includes(query)) visible = false;
         if (status && cardStatus !== status) visible = false;
         if (tag && !cardTags.includes(tag)) visible = false;
 
         card.style.display = visible ? "" : "none";
+
+        if (visible) visibleCount++;
+      });
+
+      if (countDisplay) {
+        countDisplay.textContent = visibleCount.toString();
       }
-    };
 
-    // مرتب‌سازی کارت‌ها بر اساس مقدار select
-    const sortCards = () => {
-      const cards = getCards().filter(card => card.style.display !== "none"); // فقط کارت‌های قابل مشاهده
-      const value = sortSelect?.value ?? "rating-desc";
+      const visibleCards = cards.filter(
+        (card) => card.style.display !== "none"
+      );
 
-      cards.sort((a, b) => {
-        switch (value) {
+      visibleCards.sort((a, b) => {
+        switch (sortValue) {
           case "rating-desc":
             return Number(b.dataset.rating) - Number(a.dataset.rating);
+
           case "rating-asc":
             return Number(a.dataset.rating) - Number(b.dataset.rating);
+
           case "year-desc":
             return Number(b.dataset.year) - Number(a.dataset.year);
+
           case "year-asc":
             return Number(a.dataset.year) - Number(b.dataset.year);
-          case "finished-desc":
-            return new Date(b.dataset.finished || 0).getTime() - new Date(a.dataset.finished || 0).getTime();
-          case "finished-asc":
-            return new Date(a.dataset.finished || 0).getTime() - new Date(b.dataset.finished || 0).getTime();
+
+          case "date-desc":
+            return Number(b.dataset.date) - Number(a.dataset.date);
+
+          case "date-asc":
+            return Number(a.dataset.date) - Number(b.dataset.date);
+
           default:
             return 0;
         }
       });
 
-      // append مجدد به ترتیب جدید
-      for (const card of cards) {
-        gamesList.appendChild(card);
-      }
+      visibleCards.forEach((card) => mediaList.appendChild(card));
     };
 
-    // تابع یکپارچه به‌روزرسانی (فیلتر + مرتب‌سازی) با مدیریت درخواست‌های انیمیشن
-    let updateScheduled = false;
-    const updateUI = () => {
-      if (updateScheduled) return;
-      updateScheduled = true;
-      requestAnimationFrame(() => {
-        applyFilters();
-        sortCards();
-        updateScheduled = false;
-      });
-    };
+    const handleChange = () =>
+      requestAnimationFrame(applyFiltersAndSort);
 
-    // بروزرسانی URL بدون ریلود صفحه
-    const syncURL = () => {
-      const url = new URL(window.location.href);
-      const status = statusSelect?.value ?? "";
-      const tag = tagSelect?.value ?? "";
-      const sort = sortSelect?.value ?? "rating-desc";
-
-      if (status) url.searchParams.set("status", status);
-      else url.searchParams.delete("status");
-
-      if (tag) url.searchParams.set("tag", tag);
-      else url.searchParams.delete("tag");
-
-      if (sort && sort !== "rating-desc") url.searchParams.set("sort", sort);
-      else url.searchParams.delete("sort");
-
-      history.replaceState({}, "", url);
-    };
-
-    // تغییرات را اعمال و URL را همگام می‌کند
-    const handleChange = () => {
-      syncURL();
-      updateUI();
-    };
-
-    // اتصال رویدادها
     searchInput?.addEventListener("input", handleChange);
     statusSelect?.addEventListener("change", handleChange);
     tagSelect?.addEventListener("change", handleChange);
     sortSelect?.addEventListener("change", handleChange);
-
-    // خواندن مقادیر اولیه از URL
-    const params = new URLSearchParams(window.location.search);
-    if (statusSelect && params.has("status")) statusSelect.value = params.get("status");
-    if (tagSelect && params.has("tag")) tagSelect.value = params.get("tag");
-    if (sortSelect && params.has("sort")) sortSelect.value = params.get("sort");
-
-    // اجرای اولیه
-    updateUI();
   });
 </script>
 
 <style>
-  .stats-bar {
+  .filters {
     display: flex;
     gap: 1rem;
-    flex-wrap: wrap;
-    margin-bottom: 2rem;
-  }
-  .filter-nav {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     flex-wrap: wrap;
   }
-  .filter-nav a {
-    padding: 0.5rem 1rem;
+
+  .filters select {
+    background: #111;
+    color: white;
     border: 1px solid #333;
-    border-radius: 999px;
-    text-decoration: none;
-    transition: 0.2s;
-  }
-  .filter-nav a:hover {
-    background: #222;
-  }
-  .view-switch {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-  .view-switch a {
-    border: 1px solid #333;
-    padding: 0.5rem 1rem;
+    padding: 0.6rem;
     border-radius: 8px;
-    text-decoration: none;
+    cursor: pointer;
   }
-  .view-switch a:hover {
-    background: #222;
+
+  #media-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
   }
 </style>

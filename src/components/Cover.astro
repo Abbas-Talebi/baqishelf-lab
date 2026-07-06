@@ -4,10 +4,16 @@ const {
   alt,
   type = "poster",
 } = Astro.props;
+
+// ایجاد یک Cache Buster بر اساس زمان بیلد سایت
+// این کار باعث می‌شود هر بار که سایت را آپدیت (Push) می‌کنید، 
+// مرورگر کاربران مجبور شود عکس‌ها را دوباره چک کند و کَش قدیمی را دور بریزد.
+const cacheBuster = Date.now().toString(36);
+const imageUrl = `${src}?v=${cacheBuster}`;
 ---
 
 <img
-  src={src}
+  src={imageUrl}
   alt={alt}
   loading="lazy"
   decoding="async"
@@ -23,6 +29,7 @@ const {
   transition:
     transform .25s ease,
     filter .25s ease;
+  background-color: #222; /* رنگ پس‌زمینه تا زمان لود عکس */
 }
 
 .cover:hover {
