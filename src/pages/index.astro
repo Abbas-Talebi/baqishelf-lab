@@ -110,7 +110,7 @@ function shuffleArray(array, seed) {
   return shuffled;
 }
 
-const mapToCard = (arr, type) => arr.map(i => ({ title: i.data.title, cover: i.data.cover, slug: `${base}${type}s/${i.id}`, type, date: i.data.date_finished ?? i.data.date_watched ?? i.data.date_listened, rating: i.data.personal_rating, tags: i.data.tags || [] }));
+const mapToCard = (arr, type) => arr.map(i => ({ title: i.data.title, cover: i.data.cover, slug: `${base}${type === 'music' ? 'music' : type + 's'}/${i.id}`, type, date: i.data.date_finished ?? i.data.date_watched ?? i.data.date_listened, rating: i.data.personal_rating, tags: i.data.tags || [] }));
 
 const recentEntries = [
   ...mapToCard(games.filter(i => i.data.date_finished), 'game'),
