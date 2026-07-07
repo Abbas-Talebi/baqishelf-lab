@@ -2,106 +2,69 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 
-// دریافت داده‌ها
+const base = import.meta.env.BASE_URL;
+
 const games = await getCollection("games");
 const movies = await getCollection("movies");
 const series = await getCollection("series");
 const books = await getCollection("books");
 const music = await getCollection("music");
 
-// تبدیل به آیتم‌های تایم‌لاین
-const gameEntries = games
-  .filter((g) => g.data.date_finished)
-  .map((g) => ({
-    type: "game",
-    title: g.data.title,
-    cover: g.data.cover,
-    date: g.data.date_finished,
-    slug: `/games/${g.id}`,
-  }));
+const mapToTimeline = (arr, type) => arr.filter(i => i.data.date_finished || i.data.date_watched || i.data.date_listened).map(i => {
+  const date = i.data.date_finished || i.data.date_watched || i.data.date_listened;
+  return {
+    id: i.id,
+    type,
+    title: i.data.title,
+    cover: i.data.cover ? `${base}covers/${i.data.cover}` : null,
+    slug: `${base}${type === 'music' ? 'music' : type + 's'}/${i.id}`,
+    dateStr: date.toISOString(), 
+    year: date.getFullYear().toString(),
+    month: date.getMonth().toString(),
+    dateFa: date.toLocaleDateString("fa-IR"),
+    dateEn: date.toLocaleDateString("en-CA")
+  };
+});
 
-const movieEntries = movies
-  .filter((m) => m.data.date_watched)
-  .map((m) => ({
-    type: "movie",
-    title: m.data.title,
-    cover: m.data.cover,
-    date: m.data.date_watched,
-    slug: `/movies/${m.id}`,
-  }));
+const allEntries = [
+  ...mapToTimeline(games, 'game'),
+  ...mapToTimeline(movies, 'movie'),
+  ...mapToTimeline(series, 'series'),
+  ...mapToTimeline(books, 'book'),
+  ...mapToTimeline(music, 'music')
+].sort((a, b) => new Date(b.dateStr).getTime() - new Date(a.dateStr).getTime());
 
-const seriesEntries = series
-  .filter((s) => s.data.date_watched)
-  .map((s) => ({
-    type: "series",
-    title: s.data.title,
-    cover: s.data.cover,
-    date: s.data.date_watched,
-    slug: `/series/${s.id}`,
-  }));
-
-const bookEntries = books
-  .filter((b) => b.data.date_finished)
-  .map((b) => ({
-    type: "book",
-    title: b.data.title,
-    cover: b.data.cover,
-    date: b.data.date_finished,
-    slug: `/books/${b.id}`,
-  }));
-
-const musicEntries = music
-  .filter((m) => m.data.date_listened)
-  .map((m) => ({
-    type: "music",
-    title: m.data.title,
-    cover: m.data.cover,
-    date: m.data.date_listened,
-    slug: `/music/${m.id}`,
-  }));
-
-const timelineEntries = [
-  ...gameEntries,
-  ...movieEntries,
-  ...seriesEntries,
-  ...bookEntries,
-  ...musicEntries,
-];
-
-// مرتب‌سازی نزولی بر اساس تاریخ
-const sortedEntries = [...timelineEntries].sort(
-  (a, b) => b.date.getTime() - a.date.getTime()
-);
-
-// نام ماه‌ها به فارسی
-const monthNames = [
-  "ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن",
-  "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"
-];
-
-// گروه‌بندی: سال => ماه => لیست آیتم‌ها
-const grouped = sortedEntries.reduce((acc, item) => {
-  const year = item.date.getFullYear();
-  const month = item.date.getMonth();
-  if (!acc[year]) acc[year] = {};
-  if (!acc[year][month]) acc[year][month] = [];
-  acc[year][month].push(item);
-  return acc;
-}, {});
-
-// مرتب‌سازی سال‌ها (نزولی)
-const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
+const uniqueYears = [...new Set(allEntries.map(i => i.year))].sort((a, b) => b - a);
+const clientData = JSON.stringify(allEntries);
 ---
 
-<BaseLayout title="Timeline">
-  <div class="timeline-container">
-    <h1 class="page-title">📜 خط‌زمان</h1>
+<BaseLayout title="خط زمانی">
+  
+  <div class="timeline-header">
+    <h1>⏳ خط زمانی (Timeline)</h1>
+    <p>تاریخچه تمام آثاری که تجربه کرده‌ام، به ترتیب زمان.</p>
+  </div>
 
-    <!-- فیلتر -->
-    <div class="filter-wrapper">
-      <label for="type-filter" class="filter-label">فیلتر بر اساس نوع:</label>
-      <select id="type-filter" aria-label="فیلتر مدیا">
-        <option value="">همه مدیاها</option>
+  <div class="stats-grid">
+    <div class="stat-box game"><span class="icon">🎮</span> <strong>{games.length}</strong> بازی</div>
+    <div class="stat-box movie"><span class="icon">🎬</span> <strong>{movies.length}</strong> فیلم</div>
+    <div class="stat-box series"><span class="icon">📺</span> <strong>{series.length}</strong> سریال</div>
+    <div class="stat-box book"><span class="icon">📚</span> <strong>{books.length}</strong> کتاب</div>
+    <div class="stat-box music"><span class="icon">🎵</span> <strong>{music.length}</strong> موسیقی</div>
+  </div>
+
+  <div class="filters-container">
+    <div class="filter-group">
+      <label>فیلتر سال:</label>
+      <select id="year-filter">
+        <option value="all">همه سال‌ها</option>
+        {uniqueYears.map(year => <option value={year}>{year}</option>)}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>فیلتر مدیوم:</label>
+      <select id="type-filter">
+        <option value="all">همه مدیاها</option>
         <option value="game">🎮 بازی</option>
         <option value="movie">🎬 فیلم</option>
         <option value="series">📺 سریال</option>
@@ -109,287 +72,328 @@ const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
         <option value="music">🎵 موسیقی</option>
       </select>
     </div>
-
-    <!-- نمایش گروه‌ها -->
-    {years.map((year) => {
-      const months = Object.keys(grouped[year]).sort((a, b) => Number(b) - Number(a));
-      return (
-        <section class="year-group" data-year={year}>
-          <h2 class="year-title">{year}</h2>
-          {months.map((month) => {
-            const entries = grouped[year][month];
-            return (
-              <div class="month-group" data-month={month}>
-                <h3 class="month-title">{monthNames[Number(month)]}</h3>
-                <div class="entries-grid">
-                  {entries.map((item) => (
-                    <a href={item.slug} class="entry-card" data-type={item.type}>
-                      {item.cover && (
-                        <div class="cover-wrapper">
-                          <img
-                            src={`${import.meta.env.BASE_URL}covers/${item.cover}`}
-                            alt={item.title}
-                            class="cover-image"
-                            loading="lazy"
-                          />
-                        </div>
-                      )}
-                      <div class="entry-info">
-                        <h4 class="entry-title">{item.title}</h4>
-                        <span class={`media-badge ${item.type}`}>
-                          {item.type === "game" && "🎮 بازی"}
-                          {item.type === "movie" && "🎬 فیلم"}
-                          {item.type === "series" && "📺 سریال"}
-                          {item.type === "book" && "📚 کتاب"}
-                          {item.type === "music" && "🎵 موسیقی"}
-                        </span>
-                        <div class="entry-dates">
-                          <span class="date-persian">
-                            {item.date.toLocaleDateString("fa-IR")}
-                          </span>
-                          <span class="date-english">
-                            {item.date.toLocaleDateString("en-CA")}
-                          </span>
-                        </div>
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </section>
-      );
-    })}
   </div>
+
+  <p style="text-align: center; color: #888; margin-bottom: 2rem;">📊 تعداد آثار یافت‌شده: <strong id="total-found" style="color: #fff;">{allEntries.length}</strong></p>
+
+  <!-- کانتینر اصلی تایم‌لاین که توسط جاوااسکریپت پر می‌شود -->
+  <div id="timeline-container" class="timeline-wrapper"></div>
+
+  <!-- دکمه نمایش بیشتر -->
+  <div class="load-more-container">
+    <button id="load-more-btn" class="load-more-btn">نمایش بیشتر ↓</button>
+    <p id="showing-count" class="showing-count"></p>
+  </div>
+
+  <script id="timeline-data" type="application/json" set:html={clientData}></script>
+
 </BaseLayout>
 
-<style>
-  /* =====全局 ===== */
-  .timeline-container {
-    max-width: 1200px;
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const rawData = document.getElementById("timeline-data").textContent;
+    const allItems = JSON.parse(rawData);
+    
+    const container = document.getElementById("timeline-container");
+    const yearFilter = document.getElementById("year-filter");
+    const typeFilter = document.getElementById("type-filter");
+    const loadMoreBtn = document.getElementById("load-more-btn");
+    const countText = document.getElementById("showing-count");
+    const totalFoundText = document.getElementById("total-found");
+
+    const monthNames = ["ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن", "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر"];
+    
+    const ITEMS_PER_PAGE = 20;
+    let currentPage = 1;
+    let filteredItems = [];
+
+    const getTypeLabel = (type) => {
+      switch(type) { case 'game': return '🎮 بازی'; case 'movie': return '🎬 فیلم'; case 'series': return '📺 سریال'; case 'book': return '📚 کتاب'; case 'music': return '🎵 موسیقی'; default: return ''; }
+    };
+
+    const applyFilters = () => {
+      const selectedYear = yearFilter.value;
+      const selectedType = typeFilter.value;
+
+      filteredItems = allItems.filter(item => {
+        const matchYear = selectedYear === 'all' || item.year === selectedYear;
+        const matchType = selectedType === 'all' || item.type === selectedType;
+        return matchYear && matchType;
+      });
+
+      totalFoundText.textContent = filteredItems.length;
+      currentPage = 1; 
+      renderItems();
+    };
+
+    const renderItems = () => {
+      container.innerHTML = ''; 
+      const visibleItems = filteredItems.slice(0, currentPage * ITEMS_PER_PAGE);
+
+      let currentYear = '';
+      let currentMonth = '';
+      let yearGroup = null;
+      let monthGroup = null;
+      let monthItemsContainer = null;
+
+      visibleItems.forEach(item => {
+        
+        if (item.year !== currentYear) {
+          yearGroup = document.createElement('div');
+          yearGroup.className = 'year-group';
+          
+          const yearHeader = document.createElement('div');
+          yearHeader.className = 'year-header';
+          yearHeader.textContent = item.year;
+          
+          yearGroup.appendChild(yearHeader);
+          container.appendChild(yearGroup);
+          
+          currentYear = item.year;
+          currentMonth = ''; 
+        }
+
+        if (item.month !== currentMonth) {
+          monthGroup = document.createElement('div');
+          monthGroup.className = 'month-group';
+          
+          const monthHeader = document.createElement('div');
+          monthHeader.className = 'month-header';
+          monthHeader.innerHTML = `<span>${monthNames[Number(item.month)]} ${item.year}</span>`;
+          
+          monthItemsContainer = document.createElement('div');
+          monthItemsContainer.className = 'month-items-container'; 
+          
+          monthGroup.appendChild(monthHeader);
+          monthGroup.appendChild(monthItemsContainer);
+          yearGroup.appendChild(monthGroup);
+          
+          currentMonth = item.month;
+        }
+
+        const row = document.createElement('div');
+        row.className = `timeline-row cat-${item.type}`;
+        
+        const imageHtml = item.cover 
+          ? `<img src="${item.cover}" alt="${item.title}" class="item-cover ${item.type === 'music' ? 'square' : ''}" loading="lazy" decoding="async" />`
+          : `<div class="item-cover placeholder">${getTypeLabel(item.type).split(' ')[0]}</div>`;
+
+        row.innerHTML = `
+          <div class="item-dot"></div>
+          <a href="${item.slug}" class="item-card">
+            ${imageHtml}
+            <div class="item-info">
+              <div class="item-header">
+                <h3>${item.title}</h3>
+                <span class="badge ${item.type}">${getTypeLabel(item.type)}</span>
+              </div>
+              <div class="item-dates">
+                <span class="date-fa">${item.dateFa}</span>
+                <span class="date-en">${item.dateEn}</span>
+              </div>
+            </div>
+          </a>
+        `;
+        monthItemsContainer.appendChild(row);
+      });
+
+      const currentlyShowing = Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length);
+      countText.textContent = `نمایش ${currentlyShowing} از ${filteredItems.length} اثر`;
+
+      if (currentlyShowing >= filteredItems.length) {
+        loadMoreBtn.style.display = 'none';
+      } else {
+        loadMoreBtn.style.display = 'block';
+      }
+    };
+
+    yearFilter.addEventListener('change', applyFilters);
+    typeFilter.addEventListener('change', applyFilters);
+    
+    loadMoreBtn.addEventListener('click', () => {
+      currentPage++;
+      renderItems();
+    });
+
+    applyFilters();
+  });
+</script>
+
+<!-- کلمه is:global اضافه شد تا استایل‌ها روی تگ‌های جاوااسکریپت اعمال شوند -->
+<style is:global>
+  .timeline-header { text-align: center; margin-bottom: 3rem; }
+  .timeline-header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; color: #fff; }
+  .timeline-header p { color: #888; font-size: 1.1rem; }
+
+  :root {
+    --color-game: #3b82f6; 
+    --color-movie: #ef4444; 
+    --color-series: #10b981; 
+    --color-book: #f59e0b; 
+    --color-music: #d946ef; 
+  }
+
+  .stats-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-bottom: 3rem; }
+  .stat-box { background: #111; border: 1px solid #222; padding: 0.8rem 1.5rem; border-radius: 12px; font-size: 1rem; color: #ccc; border-bottom: 3px solid transparent; }
+  .stat-box strong { color: #fff; font-size: 1.2rem; }
+  .stat-box.game { border-bottom-color: var(--color-game); }
+  .stat-box.movie { border-bottom-color: var(--color-movie); }
+  .stat-box.series { border-bottom-color: var(--color-series); }
+  .stat-box.book { border-bottom-color: var(--color-book); }
+  .stat-box.music { border-bottom-color: var(--color-music); }
+
+  .filters-container { display: flex; justify-content: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap; background: #111; padding: 1.5rem; border-radius: 16px; border: 1px solid #222; }
+  .filter-group { display: flex; align-items: center; gap: 1rem; }
+  .filter-group label { color: #888; font-size: 0.9rem; }
+  .filter-group select { background: #222; color: #fff; border: 1px solid #444; padding: 0.6rem 1.5rem; border-radius: 8px; font-family: inherit; cursor: pointer; outline: none; }
+
+  .timeline-wrapper {
+    max-width: 800px;
     margin: 0 auto;
-    padding: 2rem 1.5rem;
-    font-family: system-ui, -apple-system, sans-serif;
   }
 
-  .page-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 2rem;
-    color: #1e293b;
-    border-right: 6px solid #3b82f6;
-    padding-right: 1rem;
-  }
-
-  /* =====فیلتر ===== */
-  .filter-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2.5rem;
-    flex-wrap: wrap;
-  }
-  .filter-label {
-    font-weight: 600;
-    color: #334155;
-  }
-  #type-filter {
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    border: 1px solid #cbd5e1;
-    background-color: white;
-    font-size: 1rem;
-    cursor: pointer;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  #type-filter:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-  }
-
-  /* =====سال ===== */
   .year-group {
+    margin-bottom: 4rem;
+  }
+
+  .year-header {
+    background: #1a1a1a;
+    color: #fff;
+    text-align: center;
+    padding: 1rem;
+    border-radius: 16px;
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-bottom: 2rem;
+    border: 1px solid #333;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .month-group {
     margin-bottom: 3rem;
   }
-  .year-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #0f172a;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 0.5rem;
+
+  .month-header {
+    margin-bottom: 1.5rem;
+    margin-right: 1.5rem; 
+  }
+  
+  .month-header span {
+    background: #222;
+    color: #8b5cf6;
+    padding: 0.5rem 1.5rem;
+    border-radius: 999px;
+    font-size: 1rem;
+    font-weight: bold;
+    border: 1px solid #444;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+
+  .month-items-container {
+    position: relative;
+    padding-right: 40px; 
+  }
+
+  .month-items-container::before {
+    content: '';
+    position: absolute;
+    right: 20px; 
+    top: -10px; 
+    bottom: 0; 
+    width: 2px;
+    background: #333;
+    z-index: 0;
+  }
+
+  .timeline-row {
+    position: relative;
     margin-bottom: 1.5rem;
   }
 
-  /* =====ماه ===== */
-  .month-group {
-    margin-bottom: 2.5rem;
-  }
-  .month-title {
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: #475569;
-    margin-bottom: 1rem;
-    padding-right: 0.5rem;
-    border-right: 4px solid #94a3b8;
+  .item-dot {
+    position: absolute;
+    right: -27px; 
+    top: 30px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 3px solid #111;
+    z-index: 2;
   }
 
-  /* =====گرید کارت‌ها ===== */
-  .entries-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  .item-card {
+    display: flex;
     gap: 1.5rem;
-  }
-
-  .entry-card {
-    background: white;
+    background: #111;
+    border: 1px solid #222;
+    border-right: 4px solid transparent; 
     border-radius: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-    overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    padding: 1rem;
     text-decoration: none;
     color: inherit;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #f1f5f9;
-  }
-  .entry-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.12);
-    border-color: #e2e8f0;
-  }
-
-  .cover-wrapper {
-    aspect-ratio: 2 / 3;
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+    box-sizing: border-box;
     overflow: hidden;
-    background: #f8fafc;
-  }
-  .cover-image {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-  .entry-card:hover .cover-image {
-    transform: scale(1.02);
   }
 
-  .entry-info {
-    padding: 0.75rem 1rem 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    flex: 1;
-  }
-  .entry-title {
-    font-size: 1rem;
-    font-weight: 600;
-    margin: 0;
-    color: #0f172a;
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  .item-card:hover {
+    transform: translateX(-5px);
+    background: #151515;
+    border-color: #444;
   }
 
-  /* =====برچسب نوع ===== */
-  .media-badge {
-    display: inline-block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.2rem 0.6rem;
-    border-radius: 20px;
-    background: #f1f5f9;
-    color: #334155;
-    align-self: flex-start;
-  }
-  .media-badge.game   { background: #dbeafe; color: #1e40af; }
-  .media-badge.movie  { background: #fce7f3; color: #9d174d; }
-  .media-badge.series { background: #d1fae5; color: #065f46; }
-  .media-badge.book   { background: #fef3c7; color: #92400e; }
-  .media-badge.music  { background: #ede9fe; color: #5b21b6; }
+  .timeline-row.cat-game .item-dot { background: var(--color-game); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+  .timeline-row.cat-game .item-card { border-right-color: var(--color-game); }
+  .badge.game { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
 
-  /* =====تاریخ‌ها ===== */
-  .entry-dates {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: #64748b;
-    margin-top: 0.25rem;
-    border-top: 1px dashed #e2e8f0;
-    padding-top: 0.5rem;
-  }
-  .date-persian {
-    font-family: "Vazirmatn", "IRANSans", sans-serif;
-  }
-  .date-english {
-    font-family: monospace;
-    direction: ltr;
-  }
+  .timeline-row.cat-movie .item-dot { background: var(--color-movie); box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+  .timeline-row.cat-movie .item-card { border-right-color: var(--color-movie); }
+  .badge.movie { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
 
-  /* =====واکنش‌گرایی ===== */
-  @media (max-width: 640px) {
-    .entries-grid {
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 1rem;
-    }
-    .page-title {
-      font-size: 2rem;
-    }
-    .filter-wrapper {
-      flex-direction: column;
-      align-items: stretch;
-    }
+  .timeline-row.cat-series .item-dot { background: var(--color-series); box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+  .timeline-row.cat-series .item-card { border-right-color: var(--color-series); }
+  .badge.series { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+  .timeline-row.cat-book .item-dot { background: var(--color-book); box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+  .timeline-row.cat-book .item-card { border-right-color: var(--color-book); }
+  .badge.book { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+  .timeline-row.cat-music .item-dot { background: var(--color-music); box-shadow: 0 0 10px rgba(217, 70, 239, 0.5); }
+  .timeline-row.cat-music .item-card { border-right-color: var(--color-music); }
+  .badge.music { background: rgba(217, 70, 239, 0.1); color: #e879f9; border: 1px solid rgba(217, 70, 239, 0.3); }
+
+  .item-cover { width: 90px; height: 135px; object-fit: cover; border-radius: 8px; flex-shrink: 0; background: #222; }
+  .item-cover.square { height: 90px; }
+  .item-cover.placeholder { display: flex; align-items: center; justify-content: center; font-size: 2rem; }
+
+  .item-info { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .item-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+  .item-header h3 { margin: 0; font-size: 1.2rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  
+  .badge { padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem; white-space: nowrap; }
+
+  .item-dates { display: flex; flex-direction: column; gap: 0.3rem; }
+  .date-fa { color: #aaa; font-size: 0.95rem; }
+  .date-en { color: #666; font-size: 0.85rem; }
+
+  .load-more-container { text-align: center; margin-top: 3rem; }
+  .load-more-btn { background: #222; color: #fff; border: 1px solid #444; padding: 1rem 3rem; border-radius: 999px; font-size: 1rem; cursor: pointer; transition: background 0.2s; font-family: inherit; }
+  .load-more-btn:hover { background: #333; }
+  .showing-count { color: #666; font-size: 0.9rem; margin-top: 1rem; }
+
+  @media (max-width: 600px) {
+    .month-items-container { padding-right: 20px; }
+    .month-items-container::before { right: 5px; }
+    .item-dot { right: -21px; width: 12px; height: 12px; }
+    .item-card { gap: 1rem; padding: 0.8rem; }
+    .item-cover { width: 70px; height: 105px; }
+    .item-cover.square { height: 70px; }
+    .item-header { flex-direction: column; gap: 0.5rem; }
+    .item-header h3 { font-size: 1.1rem; white-space: normal; }
+    .filters-container { flex-direction: column; gap: 1rem; padding: 1rem; }
+    .filter-group { flex-direction: column; align-items: stretch; }
   }
 </style>
-
-<script>
-  // فیلتر پویا در سمت کلاینت
-  document.addEventListener("DOMContentLoaded", () => {
-    const filterSelect = document.getElementById("type-filter");
-    const cards = document.querySelectorAll(".entry-card");
-
-    filterSelect.addEventListener("change", (e) => {
-      const selected = e.target.value;
-      cards.forEach((card) => {
-        const type = card.dataset.type;
-        if (!selected || selected === type) {
-          card.style.display = "flex"; // or "block" depending on layout
-          // همچنین والدین (گروه‌های ماه و سال) را در صورت خالی بودن مخفی می‌کنیم
-        } else {
-          card.style.display = "none";
-        }
-      });
-
-      // مخفی کردن گروه‌های خالی (اختیاری)
-      const monthGroups = document.querySelectorAll(".month-group");
-      monthGroups.forEach((group) => {
-        const visibleCards = group.querySelectorAll(".entry-card[style*='display: flex']");
-        if (visibleCards.length === 0) {
-          group.style.display = "none";
-        } else {
-          group.style.display = "block";
-        }
-      });
-
-      // نمایش مجدد سال‌هایی که حداقل یک ماه قابل‌مشاهده دارند
-      const yearGroups = document.querySelectorAll(".year-group");
-      yearGroups.forEach((yearGroup) => {
-        const visibleMonths = yearGroup.querySelectorAll(".month-group[style*='display: block']");
-        if (visibleMonths.length === 0) {
-          yearGroup.style.display = "none";
-        } else {
-          yearGroup.style.display = "block";
-        }
-      });
-    });
-
-    // اجرای یک بار برای تنظیم اولیه (همه نمایش داده شوند)
-    // اما نیازی نیست چون همه display:flex هستند.
-    // برای اطمینان، همه کارت‌ها را قابل مشاهده می‌کنیم
-    // (در صورت استفاده از display:none در ابتدا)
-    // در اینجا همه کارت‌ها به طور پیش‌فرض نمایش داده می‌شوند.
-  });
-</script>
