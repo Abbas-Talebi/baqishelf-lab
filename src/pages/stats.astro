@@ -3,195 +3,507 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 
 const games = await getCollection("games");
-const totalGames = games.length;
+const movies = await getCollection("movies");
+const series = await getCollection("series");
+const books = await getCollection("books");
+const music = await getCollection("music");
 
-// میانگین امتیاز
-const averageRating =
-  totalGames > 0
-    ? (games.reduce((sum, g) => sum + g.data.personal_rating, 0) / totalGames).toFixed(2)
-    : 0;
+const allItems = [...games, ...movies, ...series, ...books, ...music];
+const totalItems = allItems.length;
 
-// وضعیت‌ها
-const completedGames = games.filter(g => g.data.status === "completed").length;
-const playingGames = games.filter(g => g.data.status === "playing").length;
-const droppedGames = games.filter(g => g.data.status === "dropped").length;
-const favoriteGames = games.filter(g => g.data.tags?.includes("favorite")).length;
+// ==========================================
+// 1. آمار کلی (Global Stats)
+// ==========================================
+const allRatings = allItems.map(i => i.data.personal_rating).filter(r => typeof r === "number" && r > 0);
+const averageRating = allRatings.length > 0 ? (allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length).toFixed(2) : "0.00";
 
-// ژانر محبوب
-const genreCount: Record<string, number> = {};
-for (const game of games) {
-  for (const genre of game.data.genres ?? []) {
-    genreCount[genre] = (genreCount[genre] ?? 0) + 1;
-  }
-}
-const topGenre = Object.entries(genreCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "نامشخص";
+const favoriteCount = allItems.filter(i => i.data.tags?.includes("favorite")).length;
 
-// پلتفرم محبوب
-const platformCount: Record<string, number> = {};
-for (const game of games) {
-  for (const platform of game.data.platforms ?? []) {
-    platformCount[platform] = (platformCount[platform] ?? 0) + 1;
-  }
-}
-const topPlatform = Object.entries(platformCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "نامشخص";
+let statusCounts = { completed: 0, active: 0, planned: 0, dropped: 0 };
+allItems.forEach(item => {
+  const s = item.data.status;
+  if (['completed', 'watched', 'listened'].includes(s)) statusCounts.completed++;
+  else if (['playing', 'watching', 'reading', 'listening'].includes(s)) statusCounts.active++;
+  else if (['planned', 'backlog'].includes(s)) statusCounts.planned++;
+  else if (s === 'dropped') statusCounts.dropped++;
+});
 
-// Achievement‌ها
-const totalAchievementsUnlocked = games.reduce((sum, g) => sum + (g.data.achievements_unlocked ?? 0), 0);
-const totalAchievements = games.reduce((sum, g) => sum + (g.data.achievements_total ?? 0), 0);
-const achievementRate = totalAchievements > 0 ? ((totalAchievementsUnlocked / totalAchievements) * 100).toFixed(1) : 0;
+const globalCompletionRate = totalItems > 0 ? Math.round((statusCounts.completed / totalItems) * 100) : 0;
 
-// نرخ تکمیل آرشیو
-const archiveCompletion = totalGames > 0 ? ((completedGames / totalGames) * 100).toFixed(1) : 0;
+const getTopItem = (arr) => {
+  const counts = {};
+  arr.forEach(item => { if (item) counts[item] = (counts[item] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "نامشخص";
+};
+
+// ==========================================
+// 2. آمار اختصاصی مدیوم‌ها
+// ==========================================
+const totalMovieRuntime = movies.reduce((sum, m) => sum + (m.data.runtime || 0), 0);
+const movieHours = Math.floor(totalMovieRuntime / 60);
+const topDirector = getTopItem(movies.map(m => m.data.director));
+
+const totalSeasons = series.reduce((sum, s) => sum + (s.data.seasons || 0), 0);
+const totalEpisodes = series.reduce((sum, s) => sum + (s.data.episodes || 0), 0);
+
+const totalPages = books.reduce((sum, b) => sum + (b.data.pages || 0), 0);
+const topAuthor = getTopItem(books.map(b => b.data.author));
+
+const topArtist = getTopItem(music.map(m => m.data.artist));
+
+const totalAchievementsUnlocked = games.reduce((sum, g) => sum + (g.data.achievements_unlocked || 0), 0);
+const totalAchievements = games.reduce((sum, g) => sum + (g.data.achievements_total || 0), 0);
+const achievementRate = totalAchievements > 0 ? Math.round((totalAchievementsUnlocked / totalAchievements) * 100) : 0;
+const topPlatform = getTopItem(games.flatMap(g => g.data.platforms || []));
+
+// ==========================================
+// 3. ژانرها
+// ==========================================
+const genreCounts = {};
+allItems.forEach(item => {
+  item.data.genres?.forEach(genre => { genreCounts[genre] = (genreCounts[genre] ?? 0) + 1; });
+});
+const topGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
 ---
 
-<BaseLayout title="آمار">
+<BaseLayout title="آمار و ارقام">
+  
+  <!-- Hero Section (از طراحی شما) -->
   <section class="stats-hero">
-    <div>
-      <p class="hero-subtitle">داشبورد شخصی</p>
-      <h1>🎮 Game Statistics</h1>
-      <p class="hero-description">نمای کلی آرشیو، امتیازها، پیشرفت بازی‌ها و اچیومنت‌ها</p>
+    <div class="hero-glow glow-purple"></div>
+    <div class="hero-glow glow-blue"></div>
+    
+    <div class="hero-content">
+      <p class="hero-subtitle">داشبورد تحلیلی شخصی</p>
+      <h1>📊 آمار و ارقام آرشیو</h1>
+      <p class="hero-description">نگاهی دقیق به دستاوردها، زمان‌های صرف شده و علایق من.</p>
     </div>
-    <div class="hero-number">
-      {totalGames}
-      <span>بازی ثبت شده</span>
+    
+    <div class="hero-total">
+      <span class="total-number">{totalItems}</span>
+      <span class="total-label">کل آثار ثبت‌شده</span>
     </div>
   </section>
 
-  <div class="stats-grid">
-    <!-- کارت‌های اصلی آماری -->
-    <div class="stat-card">
-      <span class="emoji">⭐</span>
-      <h2>{averageRating}</h2>
-      <p>میانگین امتیاز</p>
+  <!-- Global Overview (از طراحی شما) -->
+  <section class="global-overview">
+    <div class="glass-card stat-primary">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-info">
+        <h3>{averageRating}</h3>
+        <p>میانگین نمرات کل</p>
+      </div>
+    </div>
+    
+    <div class="glass-card stat-primary">
+      <div class="stat-icon">❤️</div>
+      <div class="stat-info">
+        <h3>{favoriteCount}</h3>
+        <p>آثار مورد علاقه (Favorite)</p>
+      </div>
     </div>
 
-    <div class="stat-card">
-      <span class="emoji">❤️</span>
-      <h2>{favoriteGames}</h2>
-      <p>Favorite</p>
+    <div class="glass-card stat-primary">
+      <div class="stat-icon">✅</div>
+      <div class="stat-info">
+        <h3>{statusCounts.completed}</h3>
+        <p>آثار تکمیل/تماشا شده</p>
+      </div>
     </div>
 
-    <div class="stat-card">
-      <span class="emoji">🎭</span>
-      <h2>{topGenre}</h2>
-      <p>محبوب‌ترین ژانر</p>
-    </div>
-
-    <div class="stat-card">
-      <span class="emoji">🖥️</span>
-      <h2>{topPlatform}</h2>
-      <p>محبوب‌ترین پلتفرم</p>
-    </div>
-
-    <!-- کارت پیشرفت Achievement -->
-    <div class="stat-card achievement-card">
-      <div class="card-header">
-        <span>🏆 Achievement Progress</span>
-        <strong>{achievementRate}%</strong>
+    <div class="glass-card stat-primary progress-card">
+      <div class="progress-header">
+        <span>نرخ تکمیل آرشیو</span>
+        <strong>{globalCompletionRate}%</strong>
       </div>
       <div class="progress-bar">
-        <div class="progress-fill" style={`width: ${achievementRate}%`}></div>
+        <div class="progress-fill gradient-global" style={`width: ${globalCompletionRate}%`}></div>
       </div>
-      <p>{totalAchievementsUnlocked} / {totalAchievements}</p>
+    </div>
+  </section>
+
+  <!-- بخش تحلیلی ترکیبی (Bento Grid) -->
+  <section class="analytics-bento">
+    
+    <!-- توزیع مدیوم‌ها -->
+    <div class="glass-card bento-item">
+      <h3 class="section-title">توزیع مدیوم‌ها</h3>
+      <div class="media-bars">
+        <div class="media-bar-item"><div class="media-label"><span class="dot game"></span> بازی ({games.length})</div><div class="bar-bg"><div class="bar-fill game" style={`width: ${(games.length/totalItems)*100}%`}></div></div></div>
+        <div class="media-bar-item"><div class="media-label"><span class="dot movie"></span> فیلم ({movies.length})</div><div class="bar-bg"><div class="bar-fill movie" style={`width: ${(movies.length/totalItems)*100}%`}></div></div></div>
+        <div class="media-bar-item"><div class="media-label"><span class="dot series"></span> سریال ({series.length})</div><div class="bar-bg"><div class="bar-fill series" style={`width: ${(series.length/totalItems)*100}%`}></div></div></div>
+        <div class="media-bar-item"><div class="media-label"><span class="dot book"></span> کتاب ({books.length})</div><div class="bar-bg"><div class="bar-fill book" style={`width: ${(books.length/totalItems)*100}%`}></div></div></div>
+        <div class="media-bar-item"><div class="media-label"><span class="dot music"></span> موسیقی ({music.length})</div><div class="bar-bg"><div class="bar-fill music" style={`width: ${(music.length/totalItems)*100}%`}></div></div></div>
+      </div>
     </div>
 
-    <!-- وضعیت بازی‌ها -->
-    <div class="stat-card">
-      <span class="emoji">✅</span>
-      <h2>{completedGames}</h2>
-      <p>تکمیل شده</p>
+    <!-- رکوردهای جالب -->
+    <div class="glass-card bento-item">
+      <h3 class="section-title">رکوردهای جالب</h3>
+      <div class="facts-grid">
+        <div class="fact-item"><span class="fact-icon">📖</span><div class="fact-info"><span class="fact-val">{totalPages.toLocaleString()}</span><span class="fact-lbl">صفحه خوانده شده</span></div></div>
+        <div class="fact-item"><span class="fact-icon">🍿</span><div class="fact-info"><span class="fact-val">{movieHours.toLocaleString()}</span><span class="fact-lbl">ساعت فیلم دیده شده</span></div></div>
+        <div class="fact-item"><span class="fact-icon">📺</span><div class="fact-info"><span class="fact-val">{totalEpisodes.toLocaleString()}</span><span class="fact-lbl">قسمت سریال دیده شده</span></div></div>
+        <div class="fact-item"><span class="fact-icon">🏆</span><div class="fact-info"><span class="fact-val">{totalAchievements.toLocaleString()}</span><span class="fact-lbl">اچیومنت باز شده</span></div></div>
+      </div>
     </div>
 
-    <div class="stat-card">
-      <span class="emoji">🎮</span>
-      <h2>{playingGames}</h2>
-      <p>در حال تجربه</p>
-    </div>
-
-    <div class="stat-card">
-      <span class="emoji">💔</span>
-      <h2>{droppedGames}</h2>
-      <p>رها شده</p>
-    </div>
-
-    <div class="stat-card">
-      <span class="emoji">📊</span>
-      <h2>{archiveCompletion}%</h2>
-      <p>نرخ تکمیل آرشیو</p>
-    </div>
+    <!-- وضعیت آرشیو (نمودار دایره‌ای) -->
+    <div class="glass-card bento-item status-card">
+      <h3 class="section-title">وضعیت آرشیو</h3>
+      <div class="status-content">
+        <div class="circular-progress">
+          <svg
+    viewBox="0 0 36 36"
+    class="circular-chart"
+    overflow="visible"
+>
+		  <defs>
+  <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#8b5cf6" />
+    <stop offset="50%" stop-color="#6366f1" />
+    <stop offset="100%" stop-color="#3b82f6" />
+  </linearGradient>
+</defs>
+            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <path
+    class="circle"
+    stroke="url(#progressGradient)" stroke-dasharray={`${globalCompletionRate}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            <text x="18" y="20.35" class="percentage">{globalCompletionRate}%</text>
+          </svg>
+        </div>
+        <div class="status-list">
+  <div class="s-item">
+    <span class="s-dot active"></span>
+    <span class="s-label">در حال تجربه:</span>
+    <span class="s-line"></span>
+    <strong>{statusCounts.active}</strong>
   </div>
 
-  <style>
-    .stats-hero {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 2rem;
-      margin-bottom: 2rem;
-      border-radius: 24px;
-      background: linear-gradient(135deg, #171717, #101010);
-      border: 1px solid #262626;
-    }
-    .hero-subtitle {
-      color: #8b5cf6;
-      font-size: 0.9rem;
-      margin-bottom: 0.5rem;
-    }
-    .hero-description {
-      opacity: 0.7;
-    }
-    .hero-number {
-      font-size: 4rem;
-      font-weight: 800;
-    }
-    .hero-number span {
-      display: block;
-      font-size: 0.9rem;
-      opacity: 0.6;
-    }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 1rem;
-    }
-    .stat-card {
-      background: linear-gradient(180deg, #171717, #101010);
-      border: 1px solid #222;
-      border-radius: 20px;
-      padding: 1.4rem;
-      transition: 0.25s ease;
-    }
-    .stat-card:hover {
-      transform: translateY(-6px);
-      border-color: #444;
-    }
-    .stat-card h2 {
-      margin: 0.6rem 0;
-      font-size: 2rem;
-    }
-    .stat-card p {
-      opacity: 0.7;
-    }
-    .emoji {
-      font-size: 1.8rem;
-      display: block;
-    }
-    .progress-bar {
-      height: 12px;
-      background: #222;
-      border-radius: 999px;
-      overflow: hidden;
-      margin: 1rem 0;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #8b5cf6, #3b82f6, #06b6d4);
-      border-radius: 999px;
-    }
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-  </style>
+  <div class="s-item">
+    <span class="s-dot planned"></span>
+    <span class="s-label">در صف / برنامه:</span>
+    <span class="s-line"></span>
+    <strong>{statusCounts.planned}</strong>
+  </div>
+
+  <div class="s-item">
+    <span class="s-dot dropped"></span>
+    <span class="s-label">رها شده:</span>
+    <span class="s-line"></span>
+    <strong>{statusCounts.dropped}</strong>
+  </div>
+</div>
+        </div>
+      </div>
+
+
+    <!-- ۵ ژانر برتر -->
+    <div class="glass-card bento-item">
+      <h3 class="section-title">۵ ژانر برتر</h3>
+      <div class="top-genres-list">
+        {topGenres.map(([genre, count], index) => (
+          <div class="genre-row">
+            <span class="g-rank">#{index + 1}</span>
+            <span class="g-name">{genre}</span>
+            <span class="g-count">{count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Media Specific Dashboards (با گرید 12 ستونه متقارن) -->
+  <section class="media-dashboards-grid">
+
+    <!-- ردیف اول: ۳ کارت -->
+    <div class="glass-card media-card m-movie">
+      <div class="card-header"><span class="icon">🎬</span> <h2>سینما</h2></div>
+      <div class="stat-list">
+        <div class="stat-row"><span>تعداد فیلم‌ها:</span> <strong>{movies.length}</strong></div>
+        <div class="stat-row"><span>مجموع زمان تماشا:</span> <strong>{movieHours} ساعت</strong></div>
+        <div class="stat-row"><span>محبوب‌ترین کارگردان:</span> <strong>{topDirector}</strong></div>
+      </div>
+    </div>
+
+    <div class="glass-card media-card m-series">
+      <div class="card-header"><span class="icon">📺</span> <h2>تلویزیون</h2></div>
+      <div class="stat-list">
+        <div class="stat-row"><span>تعداد سریال‌ها:</span> <strong>{series.length}</strong></div>
+        <div class="stat-row"><span>مجموع فصل‌ها:</span> <strong>{totalSeasons}</strong></div>
+        <div class="stat-row"><span>مجموع قسمت‌ها:</span> <strong>{totalEpisodes}</strong></div>
+      </div>
+    </div>
+
+    <div class="glass-card media-card m-game">
+      <div class="card-header"><span class="icon">🎮</span> <h2>گیمینگ</h2></div>
+      <div class="stat-list">
+        <div class="stat-row"><span>تعداد بازی‌ها:</span> <strong>{games.length}</strong></div>
+        <div class="stat-row"><span>محبوب‌ترین پلتفرم:</span> <strong>{topPlatform}</strong></div>
+      </div>
+      <div class="progress-section">
+        <div class="progress-header"><span>پیشرفت اچیومنت‌ها</span><strong>{achievementRate}%</strong></div>
+        <div class="progress-bar"><div class="progress-fill gradient-game" style={`width: ${achievementRate}%`}></div></div>
+        <p class="progress-detail">{totalAchievementsUnlocked} از {totalAchievements} باز شده</p>
+      </div>
+    </div>
+
+    <!-- ردیف دوم: ۲ کارت (پهن‌تر برای پر کردن فضا) -->
+    <div class="glass-card media-card m-book">
+      <div class="card-header"><span class="icon">📚</span> <h2>کتابخانه</h2></div>
+      <div class="stat-list">
+        <div class="stat-row"><span>تعداد کتاب‌ها:</span> <strong>{books.length}</strong></div>
+        <div class="stat-row"><span>مجموع صفحات:</span> <strong>{totalPages.toLocaleString()}</strong></div>
+        <div class="stat-row"><span>محبوب‌ترین نویسنده:</span> <strong>{topAuthor}</strong></div>
+      </div>
+    </div>
+
+    <div class="glass-card media-card m-music">
+      <div class="card-header"><span class="icon">🎵</span> <h2>موسیقی</h2></div>
+      <div class="stat-list">
+        <div class="stat-row"><span>تعداد آلبوم/قطعه:</span> <strong>{music.length}</strong></div>
+        <div class="stat-row"><span>محبوب‌ترین هنرمند:</span> <strong>{topArtist}</strong></div>
+      </div>
+    </div>
+
+  </section>
+
 </BaseLayout>
+
+<style>
+  /* =========================================
+     Hero Section
+     ========================================= */
+  .stats-hero {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0a0a0a;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 24px;
+    padding: 3rem 4rem;
+    margin-bottom: 3rem;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  }
+
+  .hero-glow { position: absolute; width: 250px; height: 250px; border-radius: 50%; filter: blur(90px); z-index: 0; opacity: 0.4; }
+  .glow-purple { top: -50px; right: -50px; background: #8b5cf6; }
+  .glow-blue { bottom: -50px; left: -50px; background: #3b82f6; }
+
+  .hero-content { position: relative; z-index: 1; max-width: 600px; }
+  .hero-subtitle { color: #8b5cf6; font-size: 1rem; font-weight: bold; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 1px; }
+  .hero-content h1 { font-size: 3rem; margin: 0 0 1rem 0; color: #fff; }
+  .hero-description { opacity: 0.7; font-size: 1.1rem; line-height: 1.6; margin: 0; }
+
+  .hero-total {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 2rem 3rem;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+  }
+  .total-number { font-size: 4.5rem; font-weight: 900; line-height: 1; background: linear-gradient(135deg, #fff, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .total-label { font-size: 1rem; color: #888; margin-top: 0.5rem; font-weight: bold; }
+
+  /* =========================================
+     Global Overview (4 Cards)
+     ========================================= */
+  .global-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  .glass-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border: 1px solid #2f2f2f;
+    border-radius: 20px;
+    padding: 1.5rem;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .glass-card:hover { transform: translateY(-4px); border-color: #555; }
+
+  .stat-primary { display: flex; align-items: center; gap: 1.2rem; }
+  .stat-icon { font-size: 2.5rem; background: rgba(255,255,255,0.05); width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 14px; }
+  .stat-info h3 { margin: 0; font-size: 2rem; color: #fff; }
+  .stat-info p { margin: 0; font-size: 0.9rem; color: #888; }
+
+  .progress-card { flex-direction: column; justify-content: center; align-items: stretch; gap: 0.8rem; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; color: #ccc; font-size: 0.95rem; }
+  .progress-header strong { color: #fff; font-size: 1.2rem; }
+  
+  .progress-bar { width: 100%; height: 8px; background: #222; border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; }
+  .gradient-global { background: linear-gradient(90deg, #8b5cf6, #c4b5fd); }
+  .gradient-game { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+
+  /* =========================================
+     Analytics Bento (Middle Section)
+     ========================================= */
+  .analytics-bento {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+
+  .section-title { margin: 0 0 1.5rem 0; font-size: 1.2rem; color: #ccc; border-bottom: 1px solid #222; padding-bottom: 0.8rem; }
+
+  /* Media Bars */
+  .media-bars { display: flex; flex-direction: column; gap: 1rem; }
+  .media-bar-item { display: flex; align-items: center; gap: 1rem; }
+  .media-label { width: 120px; font-size: 0.95rem; color: #aaa; display: flex; align-items: center; gap: 0.5rem; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  :root { --color-game: #3b82f6; --color-movie: #ef4444; --color-series: #10b981; --color-book: #f59e0b; --color-music: #d946ef; }
+  .dot.game, .bar-fill.game { background: var(--color-game); }
+  .dot.movie, .bar-fill.movie { background: var(--color-movie); }
+  .dot.series, .bar-fill.series { background: var(--color-series); }
+  .dot.book, .bar-fill.book { background: var(--color-book); }
+  .dot.music, .bar-fill.music { background: var(--color-music); }
+  .bar-bg { flex: 1; height: 12px; background: #222; border-radius: 999px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 999px; transition: width 1s ease-out; }
+
+  /* Fun Facts */
+  .facts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .fact-item { display: flex; align-items: center; gap: 1rem; background: #151515; padding: 1rem; border-radius: 16px; border: 1px solid #222; }
+  .fact-icon { font-size: 2rem; background: #222; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+  .fact-info { display: flex; flex-direction: column; }
+  .fact-val { font-size: 1.4rem; font-weight: bold; color: #fff; }
+  .fact-lbl { font-size: 0.85rem; color: #888; }
+
+  /* Status Circle */
+  .status-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+  .circular-progress { width: 200px; }
+  .circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 250px; }
+  .circle-bg { fill: none; stroke: #222; stroke-width: 4; transform-origin: 50% 50%; }
+  .circle { fill: none; filter: drop-shadow(0 0 5px rgba(99,102,241,.45)); stroke-width: 4; stroke-linecap: butt; transform-origin: 50% 50%; animation: progress 1s ease-out forwards; }
+  .percentage { fill: #fff; font-family: inherit; font-size: 0.5em; text-anchor: middle; font-weight: bold; }
+  @keyframes progress { 0% { stroke-dasharray: 0 100; } }
+  .status-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.s-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.s-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.s-dot.active   { background: #3b82f6; }
+.s-dot.planned  { background: #f59e0b; }
+.s-dot.dropped  { background: #ef4444; }
+
+.s-label {
+  white-space: nowrap;
+  color: #ccc;
+  font-size: 0.95rem;
+}
+
+.s-line {
+  flex: 1;
+  border-bottom: 3px dotted rgba(255, 255, 255, 0.8);
+  height: 0;
+  margin: 0 8px;
+}
+
+.s-item strong {
+  min-width: 30px;
+  text-align: right;
+  color: #fff;
+  font-size: 1rem;
+}
+
+
+  .s-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .s-dot.active { background: #3b82f6; }
+  .s-dot.planned { background: #f59e0b; }
+  .s-dot.dropped { background: #ef4444; }
+
+  /* Genres */
+  .top-genres-list { display: flex; flex-direction: column; gap: 0.8rem; }
+  .genre-row { display: flex; align-items: center; background: #151515; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid #222; }
+  .g-rank { color: #8b5cf6; font-weight: bold; margin-left: 1rem; width: 20px; }
+  .g-name { flex: 1; color: #eee; }
+  .g-count { background: #222; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.85rem; color: #aaa; }
+
+  /* =========================================
+     Media Dashboards (Symmetrical 12-Col Grid)
+     ========================================= */
+  .media-dashboards-grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.5rem;
+  }
+
+  .media-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ردیف اول: 3 کارت (هر کدام 4 ستون) */
+  .m-movie, .m-series, .m-game { grid-column: span 4; }
+  /* ردیف دوم: 2 کارت (هر کدام 6 ستون) */
+  .m-book, .m-music { grid-column: span 6; }
+
+  .card-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.5rem; border-bottom: 1px solid #222; padding-bottom: 1rem; }
+  .card-header .icon { font-size: 1.8rem; }
+  .card-header h2 { margin: 0; font-size: 1.4rem; color: #eee; }
+
+  .stat-list { display: flex; flex-direction: column; gap: 0.8rem; flex: 1; }
+  .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px dashed #222; font-size: 1rem; color: #aaa; }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row strong { color: #fff; font-size: 1.1rem; text-align: right; }
+
+  .progress-section { margin-top: auto; padding-top: 1.5rem; }
+  .progress-detail { margin: 0.5rem 0 0 0; font-size: 0.85rem; color: #666; text-align: left; }
+
+  .m-movie .card-header h2 { color: #f87171; }
+  .m-series .card-header h2 { color: #34d399; }
+  .m-game .card-header h2 { color: #60a5fa; }
+  .m-book .card-header h2 { color: #fbbf24; }
+  .m-music .card-header h2 { color: #e879f9; }
+
+  /* =========================================
+     Mobile Responsive
+     ========================================= */
+  @media (max-width: 1024px) {
+    .analytics-bento { grid-template-columns: 1fr; }
+    .m-movie, .m-series, .m-game, .m-book, .m-music { grid-column: span 6; }
+  }
+
+  @media (max-width: 768px) {
+    .stats-hero { flex-direction: column; text-align: center; padding: 2.5rem 1.5rem; gap: 2rem; }
+    .hero-content h1 { font-size: 2.2rem; }
+    .hero-total { width: 100%; padding: 1.5rem; }
+    .global-overview { grid-template-columns: 1fr; }
+    .facts-grid { grid-template-columns: 1fr; }
+    .status-content { flex-direction: column; }
+    .m-movie, .m-series, .m-game, .m-book, .m-music { grid-column: span 12; }
+  }
+</style>
