@@ -13,6 +13,7 @@ const base = import.meta.env.BASE_URL;
     <a href={`${base}stats`}>آمار</a>
     <a href={`${base}timeline`}>خط زمانی</a>
     <a href={`${base}replay`}>بازپخش سالانه</a>
+    <a href={`${base}about`} class="about-link">درباره من</a> <!-- این خط اضافه شد -->
   </nav>
 </header>
 
@@ -32,15 +33,12 @@ const base = import.meta.env.BASE_URL;
     display: flex;
     gap: 1.5rem;
     align-items: center;
-    
-    /* تنظیمات مخصوص موبایل برای جلوگیری از بیرون زدن منو */
     overflow-x: auto;
     white-space: nowrap;
-    -webkit-overflow-scrolling: touch; /* اسکرول نرم در آیفون */
-    scrollbar-width: none; /* مخفی کردن نوار اسکرول در فایرفاکس */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
 
-  /* مخفی کردن نوار اسکرول در کروم و سافاری */
   nav::-webkit-scrollbar {
     display: none;
   }
@@ -53,6 +51,20 @@ const base = import.meta.env.BASE_URL;
   }
 
   nav a:hover {
-    color: #8b5cf6; /* رنگ بنفش هنگام هاور */
+    color: #8b5cf6;
+  }
+
+  /* استایل ویژه برای لینک درباره من */
+  .about-link {
+    margin-right: auto; /* هول دادن لینک به سمت چپ منو */
+    background: rgba(139, 92, 246, 0.1);
+    color: #c4b5fd !important;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+  }
+  .about-link:hover {
+    background: rgba(139, 92, 246, 0.2);
+    border-color: #8b5cf6;
   }
 </style>

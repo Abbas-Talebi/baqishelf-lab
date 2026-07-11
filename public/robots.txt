@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://abbas-talebi.github.io/baqishelf-lab/sitemap-index.xml

@@ -8,6 +8,22 @@ interface Props {
 
 const { title } = Astro.props;
 const base = import.meta.env.BASE_URL;
+
+// تولید Canonical URL برای جلوگیری از مشکل www و non-www
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+
+// داده‌های ساختاریافته (JSON-LD) برای معرفی شما و سایت به گوگل
+const schemaData = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "BaqiShelf",
+  "url": Astro.site,
+  "author": {
+    "@type": "Person",
+    "name": "Baqi"
+  },
+  "description": "آرشیو و دیتابیس شخصی فیلم، سریال، بازی، کتاب و موسیقی من."
+};
 ---
 
 <!doctype html>
@@ -16,18 +32,33 @@ const base = import.meta.env.BASE_URL;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- SEO & Meta Tags -->
+    <!-- ================= SEO & Meta Tags ================= -->
     <title>{title} | BaqiShelf</title>
-    <meta name="description" content="آرشیو شخصی فیلم، سریال، بازی، کتاب و موسیقی من" />
+    
+    <!-- توضیحات طولانی‌تر و استاندارد برای گوگل (بین 150 تا 220 کاراکتر) -->
+    <meta name="description" content="BaqiShelf یک آرشیو و دیتابیس شخصی است برای ثبت، نقد و بررسی فیلم‌های سینمایی، سریال‌های تلویزیونی، بازی‌های ویدیویی، کتاب‌ها و آلبوم‌های موسیقی که تجربه کرده‌ام." />
+    
+    <!-- کلمات کلیدی (Keywords) -->
+    <meta name="keywords" content="آرشیو فیلم, نقد بازی, معرفی کتاب, لیست سریال, موسیقی, دیتابیس شخصی, BaqiShelf, باقی" />
     <meta name="author" content="Baqi" />
     
-    <!-- Open Graph (برای نمایش در تلگرام، توییتر و...) -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={`${title} | BaqiShelf`} />
-    <meta property="og:description" content="آرشیو شخصی فیلم، سریال، بازی، کتاب و موسیقی من" />
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonicalURL} />
     
-    <!-- Favicon -->
+    <!-- ================= Open Graph (Social Media) ================= -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={`${title} | BaqiShelf`} />
+    <meta property="og:description" content="BaqiShelf یک آرشیو و دیتابیس شخصی است برای ثبت، نقد و بررسی فیلم‌ها، سریال‌ها، بازی‌ها، کتاب‌ها و موسیقی." />
+    
+    <!-- ================= Favicons ================= -->
+    <!-- معرفی دقیق فاوآیکون‌ها برای مرورگرهای مختلف -->
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="icon" type="image/x-icon" href={`${base}favicon.ico`} />
+    <link rel="apple-touch-icon" href={`${base}favicon.svg`} />
+
+    <!-- ================= Structured Data (JSON-LD) ================= -->
+    <script type="application/ld+json" set:html={JSON.stringify(schemaData)} />
   </head>
 
 <body>

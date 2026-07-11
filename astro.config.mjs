@@ -4,10 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
 
+import sitemap from "@astrojs/sitemap";
+
 export default defineConfig({
   site: "https://abbas-talebi.github.io",
   base: "/baqishelf-lab/",
-  integrations: [react()],
+  integrations: [react(), sitemap()],
   
   // این بخش فقط روی سیستم شما کار می‌کند و فایل‌ها را می‌سازد
   vite: {
