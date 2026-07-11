@@ -1,119 +1,111 @@
 ---
 import Rating from "./Rating.astro";
+import { getStatusLabel, formatDate } from "../utils/helpers";
 
 const { series } = Astro.props;
-
 const base = import.meta.env.BASE_URL;
-
-const statusMap = {
-  watched: "✓ تماشا شده",
-  watching: "🎬 در حال تماشا",
-  planned: "📋 برنامه تماشا",
-  dropped: "✕ رها شده",
-};
 ---
 
-<table class="item-table">
-  <thead>
-    <tr>
-      <th>کاور</th>
-      <th data-sort="string">عنوان ↕</th>
-      <th data-sort="number">امتیاز ↕</th>
-      <th data-sort="number">سال ↕</th>
-      <th data-sort="string">ژانر ↕</th>
-      <th data-sort="string">وضعیت ↕</th>
-      <th data-sort="date">تاریخ تماشا ↕</th>
-    </tr>
-  </thead>
+<div class="table-container">
+  <table class="series-table sortable-table">
+    <thead>
+      <tr>
+        <th class="no-sort">کاور</th>
+        <th data-sort="string">عنوان ↕</th>
+        <th data-sort="number">امتیاز ↕</th>
+        <th data-sort="number">سال ↕</th>
+        <th data-sort="string">ژانر ↕</th>
+        <th data-sort="string">وضعیت ↕</th>
+        <th data-sort="date">تاریخ تماشا ↕</th>
+      </tr>
+    </thead>
 
-  <tbody>
-    {
-      series.map((item) => (
-        <tr>
+    <tbody>
+      {
+        series.map((item) => (
+          <tr>
+            <td class="cover-cell">
+              {
+                item.data.cover ? (
+                  <img
+                    src={`${base}covers/${item.data.cover}`}
+                    alt={item.data.title}
+                    class="table-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div class="table-cover-placeholder">📺</div>
+                )
+              }
+            </td>
 
-          <td>
-            {
-              item.data.cover && (
-                <img
-                  src={`${base}covers/${item.data.cover}`}
-                  alt={item.data.title}
-                  class="cover"
-                />
-              )
-            }
-          </td>
+            <td data-value={item.data.title} class="title-cell">
+              <a href={`${base}series/${item.id}`}>
+                {item.data.title}
+              </a>
+            </td>
 
-          <td data-value={item.data.title}>
-            <a href={`${base}series/${item.id}`}>
-              {item.data.title}
-            </a>
-          </td>
+            <td data-value={item.data.personal_rating}>
+              <Rating value={item.data.personal_rating} />
+            </td>
 
-          <td data-value={item.data.personal_rating}>
-            <Rating value={item.data.personal_rating} />
-          </td>
+            <td data-value={item.data.year} class="year-cell">
+              {item.data.year}
+            </td>
 
-          <td data-value={item.data.year}>
-            {item.data.year}
-          </td>
+            <td data-value={item.data.genres?.join(", ") ?? ""} class="genres-cell">
+              {item.data.genres?.join("، ") || "-"}
+            </td>
 
-          <td data-value={item.data.genres?.join(", ") ?? ""}>
-            {item.data.genres?.join("، ")}
-          </td>
+            <td data-value={getStatusLabel(item.data.status)}>
+              <span class={`status-pill ${item.data.status}`}>
+                {getStatusLabel(item.data.status)}
+              </span>
+            </td>
 
-          <td data-value={item.data.status ?? ""}>
-            {statusMap[item.data.status] ?? item.data.status}
-          </td>
-
-          <td data-value={item.data.date_watched?.getTime() ?? 0}>
-            {item.data.date_watched?.toLocaleDateString("fa-IR")}
-          </td>
-
-        </tr>
-      ))
-    }
-  </tbody>
-</table>
+            <td data-value={item.data.date_watched?.getTime() ?? 0} class="date-cell">
+              {formatDate(item.data.date_watched)}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const table = document.querySelector(".item-table");
+    const table = document.querySelector(".series-table");
     if (!table) return;
 
     const headers = table.querySelectorAll("th[data-sort]");
 
     headers.forEach((header) => {
       let ascending = true;
-      header.style.cursor = "pointer";
 
       header.addEventListener("click", () => {
         const tbody = table.querySelector("tbody");
         if (!tbody) return;
 
         const rows = Array.from(tbody.querySelectorAll("tr"));
-
-        const columnIndex = header.cellIndex;
-        const sortType = header.dataset.sort;
+        const columnIndex = (header as HTMLTableCellElement).cellIndex;
+        const sortType = (header as HTMLElement).dataset.sort;
 
         rows.sort((a, b) => {
-          const aCell = a.children[columnIndex];
-          const bCell = b.children[columnIndex];
+          const aCell = a.children[columnIndex] as HTMLElement;
+          const bCell = b.children[columnIndex] as HTMLElement;
 
           let aVal = aCell?.dataset?.value ?? "";
           let bVal = bCell?.dataset?.value ?? "";
 
           if (sortType === "number" || sortType === "date") {
-            aVal = Number(aVal);
-            bVal = Number(bVal);
-
-            return ascending
-              ? aVal - bVal
-              : bVal - aVal;
+            return ascending ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
           }
 
           return ascending
-            ? String(aVal).localeCompare(String(bVal))
-            : String(bVal).localeCompare(String(aVal));
+            ? String(aVal).localeCompare(String(bVal), "fa")
+            : String(bVal).localeCompare(String(aVal), "fa");
         });
 
         ascending = !ascending;
@@ -124,29 +116,18 @@ const statusMap = {
 </script>
 
 <style>
-.item-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.item-table th,
-.item-table td {
-  padding: 0.75rem;
-  text-align: center;
-  vertical-align: middle;
-  border-bottom: 1px solid #2a2a2a;
-}
-
-.cover {
-  width: 60px;
-  height: 90px;
-  object-fit: cover;
-  border-radius: 6px;
-  display: block;
-  margin: 0 auto;
-}
-
-.item-table td a {
-  text-decoration: none;
-}
+  .table-container { width: 100%; overflow-x: auto; border-radius: 16px; border: 1px solid #2a2a2a; background: #111; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
+  .series-table { width: 100%; border-collapse: collapse; min-width: 750px; text-align: center; font-size: 0.95rem; }
+  .series-table th { position: sticky; top: 0; background: #181818; color: #34d399; /* رنگ سبز */ padding: 1rem 0.75rem; font-weight: bold; border-bottom: 2px solid #333; user-select: none; white-space: nowrap; }
+  .series-table th[data-sort]:hover { background: #222; cursor: pointer; }
+  .series-table td { padding: 0.75rem; vertical-align: middle; border-bottom: 1px solid #222; color: #ddd; }
+  .series-table tbody tr { transition: background 0.2s; }
+  .series-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+  .table-cover { width: 45px; height: 65px; object-fit: cover; border-radius: 6px; display: block; margin: 0 auto; background: #222; }
+  .table-cover-placeholder { width: 45px; height: 65px; background: #222; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-size: 1.2rem; }
+  .title-cell a { color: #fff; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+  .title-cell a:hover { color: #34d399; }
+  .status-pill { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; background: rgba(255, 255, 255, 0.05); border: 1px solid #333; }
+  .year-cell, .date-cell { color: #888; font-size: 0.9rem; }
+  .genres-cell { color: #aaa; font-size: 0.85rem; max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>

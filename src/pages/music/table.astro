@@ -2,58 +2,29 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import MusicTable from "../../components/MusicTable.astro";
+import ViewSwitcher from "../../components/ViewSwitcher.astro";
 
 const base = import.meta.env.BASE_URL;
+const music = await getCollection("music");
 
-const music =
-  await getCollection("music");
-
-const sortedMusic =
-  [...music].sort(
-    (a, b) =>
-      b.data.personal_rating -
-      a.data.personal_rating
-  );
+const sortedMusic = [...music].sort(
+  (a, b) => b.data.personal_rating - a.data.personal_rating
+);
 ---
 
-<BaseLayout title="موسیقی - جدول">
+<BaseLayout title="جدول موسیقی">
+  <h1>🎵 جدول موسیقی</h1>
 
-<h1>موسیقی</h1>
+  <ViewSwitcher basePath={`${base}music`} />
 
-<div class="view-switch">
+  <p style="color: #888; margin-bottom: 1.5rem;">
+    تعداد آثار: <strong style="color: #fff;">{music.length}</strong> 
+    <span style="font-size: 0.85rem; opacity: 0.7;">(برای مرتب‌سازی روی عناوین ستون‌ها کلیک کنید)</span>
+  </p>
 
-  <a href={`${base}music`}>
-    نمای کارت
-  </a>
-
-  <a href={`${base}music/table`}>
-    نمای جدول
-  </a>
-
-</div>
-
-<p>
-  تعداد آثار:
-  {music.length}
-</p>
-
-<MusicTable
-  music={sortedMusic}
-/>
+  <MusicTable music={sortedMusic} />
+</BaseLayout>
 
 <style>
-.view-switch {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.view-switch a {
-  border: 1px solid #333;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  text-decoration: none;
-}
+  h1 { font-size: 2.5rem; margin-bottom: 2rem; color: #fff; }
 </style>
-
-</BaseLayout>

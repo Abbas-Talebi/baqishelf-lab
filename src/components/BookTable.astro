@@ -1,87 +1,83 @@
 ---
 import Rating from "./Rating.astro";
+import { getStatusLabel, formatDate } from "../utils/helpers";
 
 const { books } = Astro.props;
-
 const base = import.meta.env.BASE_URL;
-
-const statusMap = {
-  completed: "✓ خوانده شده",
-  reading: "📖 در حال خواندن",
-  planned: "📋 برنامه مطالعه",
-  dropped: "✕ رها شده",
-};
 ---
 
-<table class="book-table">
-  <thead>
-    <tr>
-      <th>کاور</th>
-      <th data-sort="string">عنوان ↕</th>
-      <th data-sort="string">نویسنده ↕</th>
-      <th data-sort="number">امتیاز ↕</th>
-      <th data-sort="number">سال ↕</th>
-      <th data-sort="number">صفحات ↕</th>
-      <th data-sort="string">ژانر ↕</th>
-      <th>وضعیت</th>
-      <th data-sort="date">تاریخ پایان ↕</th>
-    </tr>
-  </thead>
+<div class="table-container">
+  <table class="book-table sortable-table">
+    <thead>
+      <tr>
+        <th class="no-sort">کاور</th>
+        <th data-sort="string">عنوان ↕</th>
+        <th data-sort="string">نویسنده ↕</th>
+        <th data-sort="number">امتیاز ↕</th>
+        <th data-sort="number">سال ↕</th>
+        <th data-sort="number">صفحات ↕</th>
+        <th data-sort="string">وضعیت ↕</th>
+        <th data-sort="date">تاریخ اتمام ↕</th>
+      </tr>
+    </thead>
 
-  <tbody>
-    {
-      books.map((book) => (
-        <tr>
-          <td>
-            {
-              book.data.cover && (
-                <img
-                  src={`${base}covers/${book.data.cover}`}
-                  alt={book.data.title}
-                  class="cover"
-                />
-              )
-            }
-          </td>
+    <tbody>
+      {
+        books.map((book) => (
+          <tr>
+            <td class="cover-cell">
+              {
+                book.data.cover ? (
+                  <img
+                    src={`${base}covers/${book.data.cover}`}
+                    alt={book.data.title}
+                    class="table-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div class="table-cover-placeholder">📚</div>
+                )
+              }
+            </td>
 
-          <td data-value={book.data.title}>
-            <a href={`${base}books/${book.id}`}>
-              {book.data.title}
-            </a>
-          </td>
+            <td data-value={book.data.title} class="title-cell">
+              <a href={`${base}books/${book.id}`}>
+                {book.data.title}
+              </a>
+            </td>
 
-          <td data-value={book.data.author ?? ""}>
-            {book.data.author}
-          </td>
+            <td data-value={book.data.author ?? ""} class="author-cell">
+              {book.data.author || "-"}
+            </td>
 
-          <td data-value={book.data.personal_rating}>
-            <Rating value={book.data.personal_rating} />
-          </td>
+            <td data-value={book.data.personal_rating}>
+              <Rating value={book.data.personal_rating} />
+            </td>
 
-          <td data-value={book.data.year}>
-            {book.data.year}
-          </td>
+            <td data-value={book.data.year} class="year-cell">
+              {book.data.year}
+            </td>
 
-          <td data-value={book.data.pages ?? 0}>
-            {book.data.pages}
-          </td>
+            <td data-value={book.data.pages ?? 0} class="pages-cell">
+              {book.data.pages || "-"}
+            </td>
 
-          <td data-value={book.data.genres?.join(", ") ?? ""}>
-            {book.data.genres?.join("، ")}
-          </td>
+            <td data-value={getStatusLabel(book.data.status)}>
+              <span class={`status-pill ${book.data.status}`}>
+                {getStatusLabel(book.data.status)}
+              </span>
+            </td>
 
-          <td data-value={book.data.status}>
-            {statusMap[book.data.status]}
-          </td>
-
-          <td data-value={book.data.date_finished?.getTime() ?? 0}>
-            {book.data.date_finished?.toLocaleDateString("fa-IR")}
-          </td>
-        </tr>
-      ))
-    }
-  </tbody>
-</table>
+            <td data-value={book.data.date_finished?.getTime() ?? 0} class="date-cell">
+              {formatDate(book.data.date_finished)}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
@@ -93,49 +89,31 @@ const statusMap = {
     headers.forEach((header) => {
       let ascending = true;
 
-      header.style.cursor = "pointer";
-
       header.addEventListener("click", () => {
         const tbody = table.querySelector("tbody");
         if (!tbody) return;
 
-        const rows = Array.from(
-          tbody.querySelectorAll("tr")
-        );
-
-        const columnIndex = header.cellIndex;
-        const sortType = header.dataset.sort;
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        const columnIndex = (header as HTMLTableCellElement).cellIndex;
+        const sortType = (header as HTMLElement).dataset.sort;
 
         rows.sort((a, b) => {
-          const aCell = a.children[columnIndex];
-          const bCell = b.children[columnIndex];
+          const aCell = a.children[columnIndex] as HTMLElement;
+          const bCell = b.children[columnIndex] as HTMLElement;
 
-          let aVal =
-            aCell?.dataset?.value ?? "";
+          let aVal = aCell?.dataset?.value ?? "";
+          let bVal = bCell?.dataset?.value ?? "";
 
-          let bVal =
-            bCell?.dataset?.value ?? "";
-
-          if (
-            sortType === "number" ||
-            sortType === "date"
-          ) {
-            return ascending
-              ? Number(aVal) - Number(bVal)
-              : Number(bVal) - Number(aVal);
+          if (sortType === "number" || sortType === "date") {
+            return ascending ? Number(aVal) - Number(bVal) : Number(bVal) - Number(aVal);
           }
 
           return ascending
-            ? String(aVal).localeCompare(
-                String(bVal)
-              )
-            : String(bVal).localeCompare(
-                String(aVal)
-              );
+            ? String(aVal).localeCompare(String(bVal), "fa")
+            : String(bVal).localeCompare(String(aVal), "fa");
         });
 
         ascending = !ascending;
-
         tbody.replaceChildren(...rows);
       });
     });
@@ -143,27 +121,18 @@ const statusMap = {
 </script>
 
 <style>
-.book-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.book-table th,
-.book-table td {
-  padding: 0.75rem;
-  text-align: center;
-  vertical-align: middle;
-  border-bottom: 1px solid #2a2a2a;
-}
-
-.cover {
-  width: 60px;
-  height: 90px;
-  object-fit: cover;
-  border-radius: 6px;
-}
-
-.book-table td a {
-  text-decoration: none;
-}
+  .table-container { width: 100%; overflow-x: auto; border-radius: 16px; border: 1px solid #2a2a2a; background: #111; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
+  .book-table { width: 100%; border-collapse: collapse; min-width: 800px; text-align: center; font-size: 0.95rem; }
+  .book-table th { position: sticky; top: 0; background: #181818; color: #fbbf24; /* رنگ زرد */ padding: 1rem 0.75rem; font-weight: bold; border-bottom: 2px solid #333; user-select: none; white-space: nowrap; }
+  .book-table th[data-sort]:hover { background: #222; cursor: pointer; }
+  .book-table td { padding: 0.75rem; vertical-align: middle; border-bottom: 1px solid #222; color: #ddd; }
+  .book-table tbody tr { transition: background 0.2s; }
+  .book-table tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
+  .table-cover { width: 45px; height: 65px; object-fit: cover; border-radius: 6px; display: block; margin: 0 auto; background: #222; }
+  .table-cover-placeholder { width: 45px; height: 65px; background: #222; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-size: 1.2rem; }
+  .title-cell a { color: #fff; text-decoration: none; font-weight: 500; transition: color 0.2s; }
+  .title-cell a:hover { color: #fbbf24; }
+  .status-pill { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; background: rgba(255, 255, 255, 0.05); border: 1px solid #333; }
+  .year-cell, .date-cell, .pages-cell { color: #888; font-size: 0.9rem; }
+  .author-cell { color: #aaa; font-size: 0.85rem; }
 </style>
