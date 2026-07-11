@@ -1,74 +1,99 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
-import MusicCard from "../components/MusicCard.astro";
 import SearchBar from "../components/SearchBar.astro";
 import ViewSwitcher from "../components/ViewSwitcher.astro";
+import { getStatusLabel } from "../utils/helpers";
 
 const base = import.meta.env.BASE_URL;
-
 const music = await getCollection("music");
 
-const sortedMusic = [...music].sort(
-  (a, b) => b.data.personal_rating - a.data.personal_rating
-);
+const clientData = JSON.stringify(music.map(m => ({
+  id: m.id,
+  title: m.data.title,
+  year: m.data.year,
+  rating: m.data.personal_rating,
+  status: m.data.status,
+  statusLabel: getStatusLabel(m.data.status),
+  genres: m.data.genres || [],
+  tags: m.data.tags || [],
+  artist: m.data.artist || '',
+  date: m.data.date_listened ? m.data.date_listened.getTime() : 0,
+  cover: m.data.cover ? `${base}covers/${m.data.cover}` : null,
+  slug: `${base}music/${m.id}`
+})));
 ---
 
 <BaseLayout title="موسیقی">
-  <h1>موسیقی</h1>
+  <h1>🎵 موسیقی</h1>
 
   <SearchBar placeholder="جستجوی موسیقی..." />
-
+  
   <div class="filters">
     <select id="status-filter">
       <option value="">همه وضعیت‌ها</option>
-      <option value="listened">گوش داده شده</option>
-      <option value="listening">در حال گوش دادن</option>
-      <option value="planned">برنامه گوش دادن</option>
-      <option value="dropped">رها شده</option>
+      <option value="listened">شنیده شده</option>
+      <option value="listening">در حال شنیدن</option>
+      <option value="planned">برنامه</option>
     </select>
 
     <select id="tag-filter">
-  <option value="">همه تگ‌ها</option>
-  <option value="favorite">Favorite</option>
-  <option value="masterpiece">Masterpiece</option>
-  <option value="hidden-gem">Hidden Gem</option>
-  <option value="Bullshit">Bullshit</option>
-</select>
+      <option value="">همه تگ‌ها</option>
+      <option value="favorite">Favorite</option>
+      <option value="masterpiece">Masterpiece</option>
+      <option value="hidden-gem">Hidden Gem</option>
+      <option value="Bullshit">Bullshit</option>
+    </select>
 
     <select id="sort-filter">
       <option value="rating-desc">امتیاز ↓</option>
       <option value="rating-asc">امتیاز ↑</option>
       <option value="year-desc">سال انتشار ↓</option>
       <option value="year-asc">سال انتشار ↑</option>
-      <option value="date-desc">تاریخ گوش دادن ↓</option>
-      <option value="date-asc">تاریخ گوش دادن ↑</option>
+      <option value="date-desc">تاریخ شنیدن ↓</option>
+      <option value="date-asc">تاریخ شنیدن ↑</option>
     </select>
   </div>
 
   <ViewSwitcher basePath={`${base}music`} />
 
-  <p>تعداد آثار: <span id="item-count">{music.length}</span></p>
+  <p class="stats-text">تعداد آثار: <strong id="item-count" style="color: #fff;">{music.length}</strong></p>
 
-  <div id="media-list">
-    {sortedMusic.map((item) => (
-      <MusicCard music={item} />
-    ))}
+  <div id="media-list" class="media-grid"></div>
+
+  <div class="load-more-container">
+    <button id="load-more-btn" class="load-more-btn">نمایش بیشتر ↓</button>
+    <p id="showing-count" class="showing-count"></p>
   </div>
+
+  <script id="music-data" type="application/json" set:html={clientData}></script>
+
 </BaseLayout>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    const rawData = document.getElementById("music-data").textContent;
+    const allItems = JSON.parse(rawData);
+    
     const searchInput = document.getElementById("media-search");
     const statusSelect = document.getElementById("status-filter");
     const tagSelect = document.getElementById("tag-filter");
     const sortSelect = document.getElementById("sort-filter");
     const mediaList = document.getElementById("media-list");
     const countDisplay = document.getElementById("item-count");
+    const loadMoreBtn = document.getElementById("load-more-btn");
+    const showingCountText = document.getElementById("showing-count");
 
-    if (!mediaList) return;
+    const ITEMS_PER_PAGE = 20;
+    let currentPage = 1;
+    let filteredItems = [];
 
-    const getCards = () => [...document.querySelectorAll("#media-list .card")];
+    const renderStars = (rating) => {
+      const fullStars = Math.floor(rating);
+      const halfStar = rating % 1 >= 0.5;
+      const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+      return `<span class="rating-stars">${"★".repeat(fullStars)}${halfStar ? "½" : ""}${"☆".repeat(emptyStars)}</span>`;
+    };
 
     const applyFiltersAndSort = () => {
       const query = searchInput?.value.trim().toLowerCase() ?? "";
@@ -76,91 +101,188 @@ const sortedMusic = [...music].sort(
       const tag = tagSelect?.value ?? "";
       const sortValue = sortSelect?.value ?? "rating-desc";
 
-      let visibleCount = 0;
-      const cards = getCards();
-
-      cards.forEach((card) => {
-        const title = card.dataset.title?.toLowerCase() ?? "";
-        const cardStatus = card.dataset.status ?? "";
-        const cardTags = (card.dataset.tags ?? "").split(",");
-
-        let visible = true;
-
-        if (query && !title.includes(query)) visible = false;
-        if (status && cardStatus !== status) visible = false;
-        if (tag && !cardTags.includes(tag)) visible = false;
-
-        card.style.display = visible ? "" : "none";
-
-        if (visible) visibleCount++;
+      filteredItems = allItems.filter(item => {
+        const titleMatch = !query || item.title.toLowerCase().includes(query);
+        const statusMatch = !status || item.status === status;
+        const tagMatch = !tag || item.tags.includes(tag);
+        return titleMatch && statusMatch && tagMatch;
       });
 
-      if (countDisplay) {
-        countDisplay.textContent = visibleCount.toString();
-      }
-
-      const visibleCards = cards.filter(
-        (card) => card.style.display !== "none"
-      );
-
-      visibleCards.sort((a, b) => {
+      filteredItems.sort((a, b) => {
         switch (sortValue) {
-          case "rating-desc":
-            return Number(b.dataset.rating) - Number(a.dataset.rating);
-
-          case "rating-asc":
-            return Number(a.dataset.rating) - Number(b.dataset.rating);
-
-          case "year-desc":
-            return Number(b.dataset.year) - Number(a.dataset.year);
-
-          case "year-asc":
-            return Number(a.dataset.year) - Number(b.dataset.year);
-
-          case "date-desc":
-            return Number(b.dataset.date) - Number(a.dataset.date);
-
-          case "date-asc":
-            return Number(a.dataset.date) - Number(b.dataset.date);
-
-          default:
-            return 0;
+          case "rating-desc": return b.rating - a.rating;
+          case "rating-asc": return a.rating - b.rating;
+          case "year-desc": return b.year - a.year;
+          case "year-asc": return a.year - b.year;
+          case "date-desc": return b.date - a.date;
+          case "date-asc": return a.date - b.date;
+          default: return 0;
         }
       });
 
-      visibleCards.forEach((card) => mediaList.appendChild(card));
+      countDisplay.textContent = filteredItems.length;
+      currentPage = 1;
+      renderItems();
     };
 
-    const handleChange = () =>
-      requestAnimationFrame(applyFiltersAndSort);
+    const renderItems = () => {
+      if (currentPage === 1) mediaList.innerHTML = ''; 
+      
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      const itemsToRender = filteredItems.slice(startIndex, endIndex);
 
-    searchInput?.addEventListener("input", handleChange);
-    statusSelect?.addEventListener("change", handleChange);
-    tagSelect?.addEventListener("change", handleChange);
-    sortSelect?.addEventListener("change", handleChange);
+      itemsToRender.forEach(item => {
+        const card = document.createElement('a');
+        card.href = item.slug;
+        card.className = 'media-card';
+        
+        const favBadge = item.tags.includes('favorite') ? `<span class="favorite-badge">★ Favorite</span>` : '';
+        const artistHtml = item.artist ? `<p class="artist">🎤 ${item.artist}</p>` : '';
+        const genresHtml = item.genres.length > 0 ? `<p class="genres">${item.genres.join('، ')}</p>` : '';
+        const imageHtml = item.cover 
+          ? `<img src="${item.cover}" alt="${item.title}" class="cover-img square" loading="lazy" decoding="async" />`
+          : `<div class="cover-placeholder square">🎵</div>`;
+
+        card.innerHTML = `
+          ${imageHtml}
+          <div class="card-info">
+            ${favBadge}
+            <h2>${item.title}</h2>
+            <div class="rating-wrapper">${renderStars(item.rating)}</div>
+            ${artistHtml}
+            <p class="year">${item.year}</p>
+            ${genresHtml}
+          </div>
+        `;
+        mediaList.appendChild(card);
+      });
+
+      const currentlyShowing = Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length);
+      showingCountText.textContent = `نمایش ${currentlyShowing} از ${filteredItems.length} اثر`;
+
+      if (currentlyShowing >= filteredItems.length) {
+        loadMoreBtn.style.display = 'none';
+      } else {
+        loadMoreBtn.style.display = 'block';
+      }
+    };
+
+    searchInput?.addEventListener("input", applyFiltersAndSort);
+    statusSelect?.addEventListener("change", applyFiltersAndSort);
+    tagSelect?.addEventListener("change", applyFiltersAndSort);
+    sortSelect?.addEventListener("change", applyFiltersAndSort);
+    
+    loadMoreBtn?.addEventListener("click", () => {
+      currentPage++;
+      renderItems();
+    });
+
+    applyFiltersAndSort();
   });
 </script>
 
-<style>
-  .filters {
+<style is:global>
+  h1 { font-size: 2.5rem; margin-bottom: 2rem; color: #fff; }
+
+  .filters { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .filters select { background: #111; color: white; border: 1px solid #333; padding: 0.7rem 1rem; border-radius: 10px; cursor: pointer; font-family: inherit; outline: none; }
+  .filters select:hover { border-color: #666; }
+
+  .stats-text { color: #888; margin-bottom: 2rem; }
+
+  .media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .media-card {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-  }
-
-  .filters select {
+    gap: 1.5rem;
+    padding: 1.2rem;
     background: #111;
-    color: white;
-    border: 1px solid #333;
-    padding: 0.6rem;
-    border-radius: 8px;
-    cursor: pointer;
+    border: 1px solid #2a2a2a;
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, border-color 0.2s;
+    overflow: hidden;
   }
 
-  #media-list {
+  .media-card:hover {
+    transform: translateY(-4px);
+    border-color: #d946ef; /* رنگ بنفش برای موسیقی */
+  }
+
+  /* استایل اختصاصی مربعی برای موسیقی */
+  .cover-img.square {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+    background: #222;
+  }
+
+  .cover-placeholder.square {
+    width: 150px;
+    height: 150px;
+    background: #222;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    flex-shrink: 0;
+  }
+
+  .card-info {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    justify-content: center;
+  }
+
+  .card-info h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+  }
+
+  .rating-wrapper { margin-bottom: 0.5rem; }
+  .rating-stars { color: #fbbf24; font-size: 1.2rem; letter-spacing: 2px; }
+
+  .artist { margin: 0 0 0.5rem 0; color: #d946ef; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .year { margin: 0 0 0.5rem 0; color: #888; font-size: 1rem; }
+  .genres { margin: 0; color: #aaa; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .favorite-badge {
+    display: inline-block;
+    align-self: flex-start;
+    margin-bottom: 0.5rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    font-size: 0.8rem;
+    font-weight: bold;
+  }
+
+  .load-more-container { text-align: center; margin-top: 3rem; }
+  .load-more-btn { background: #d946ef; color: #fff; border: none; padding: 1rem 3rem; border-radius: 999px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: background 0.2s; font-family: inherit; }
+  .load-more-btn:hover { background: #c026d3; }
+  .showing-count { color: #666; font-size: 0.9rem; margin-top: 1rem; }
+
+  @media (max-width: 600px) {
+    .media-grid { grid-template-columns: 1fr; }
+    .media-card { padding: 1rem; gap: 1rem; }
+    .cover-img.square, .cover-placeholder.square { width: 100px; height: 100px; }
+    .card-info h2 { font-size: 1.1rem; white-space: normal; }
   }
 </style>
