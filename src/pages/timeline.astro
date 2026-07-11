@@ -12,12 +12,22 @@ const music = await getCollection("music");
 
 const mapToTimeline = (arr, type) => arr.filter(i => i.data.date_finished || i.data.date_watched || i.data.date_listened).map(i => {
   const date = i.data.date_finished || i.data.date_watched || i.data.date_listened;
+  
+  // نگاشت نوع به مسیر صحیح
+  const typeToPath = {
+    game: 'games',
+    movie: 'movies',
+    series: 'series',   // توجه: بدون s اضافی
+    book: 'books',
+    music: 'music'
+  };
+  
   return {
     id: i.id,
     type,
     title: i.data.title,
     cover: i.data.cover ? `${base}covers/${i.data.cover}` : null,
-    slug: `${base}${type === 'music' ? 'music' : type + 's'}/${i.id}`,
+    slug: `${base}${typeToPath[type]}/${i.id}`,
     dateStr: date.toISOString(), 
     year: date.getFullYear().toString(),
     month: date.getMonth().toString(),
