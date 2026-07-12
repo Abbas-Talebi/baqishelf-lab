@@ -246,13 +246,16 @@ const clientData = JSON.stringify(books.map(b => ({
     justify-content: center;
   }
 
-  .card-info h2 {
+    .card-info h2 {
     margin: 0 0 0.5rem 0;
-    font-size: 1.4rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 1.3rem;
+    line-height: 1.4; /* فاصله بین خطوط برای خوانایی بهتر */
     color: #fff;
+    /* کدهای مربوط به سه‌نقطه (white-space و text-overflow) حذف شدند */
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* حداکثر 3 خط را نشان می‌دهد تا کارت خیلی بزرگ نشود */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
   .rating-wrapper { margin-bottom: 0.5rem; }

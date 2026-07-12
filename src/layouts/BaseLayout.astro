@@ -9,6 +9,13 @@ interface Props {
 const { title } = Astro.props;
 const base = import.meta.env.BASE_URL;
 
+// ==========================================
+// تنظیمات فوتر و سئو
+// ==========================================
+const currentYear = new Date().getFullYear();
+const siteVersion = "v0.5.4.1"; // ورژن سایت شما
+const authorName = "باقی";
+
 // تولید Canonical URL برای جلوگیری از مشکل www و non-www
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
@@ -20,7 +27,7 @@ const schemaData = {
   "url": Astro.site,
   "author": {
     "@type": "Person",
-    "name": "Baqi"
+    "name": authorName
   },
   "description": "آرشیو و دیتابیس شخصی فیلم، سریال، بازی، کتاب و موسیقی من."
 };
@@ -35,12 +42,9 @@ const schemaData = {
     <!-- ================= SEO & Meta Tags ================= -->
     <title>{title} | BaqiShelf</title>
     
-    <!-- توضیحات طولانی‌تر و استاندارد برای گوگل (بین 150 تا 220 کاراکتر) -->
     <meta name="description" content="BaqiShelf یک آرشیو و دیتابیس شخصی است برای ثبت، نقد و بررسی فیلم‌های سینمایی، سریال‌های تلویزیونی، بازی‌های ویدیویی، کتاب‌ها و آلبوم‌های موسیقی که تجربه کرده‌ام." />
-    
-    <!-- کلمات کلیدی (Keywords) -->
-    <meta name="keywords" content="آرشیو فیلم, نقد بازی, معرفی کتاب, لیست سریال, موسیقی, دیتابیس شخصی, BaqiShelf, باقی" />
-    <meta name="author" content="Baqi" />
+    <meta name="keywords" content="آرشیو فیلم, نقد بازی, معرفی کتاب, لیست سریال, موسیقی, دیتابیس شخصی, BaqiShelf, عباس طالبی" />
+    <meta name="author" content="Abbas Talebi" />
     
     <!-- Canonical URL -->
     <link rel="canonical" href={canonicalURL} />
@@ -52,7 +56,6 @@ const schemaData = {
     <meta property="og:description" content="BaqiShelf یک آرشیو و دیتابیس شخصی است برای ثبت، نقد و بررسی فیلم‌ها، سریال‌ها، بازی‌ها، کتاب‌ها و موسیقی." />
     
     <!-- ================= Favicons ================= -->
-    <!-- معرفی دقیق فاوآیکون‌ها برای مرورگرهای مختلف -->
     <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
     <link rel="icon" type="image/x-icon" href={`${base}favicon.ico`} />
     <link rel="apple-touch-icon" href={`${base}favicon.svg`} />
@@ -61,10 +64,112 @@ const schemaData = {
     <script type="application/ld+json" set:html={JSON.stringify(schemaData)} />
   </head>
 
-<body>
-  <Header />
-  <main>
-    <slot />
-  </main>
-</body>
+  <body class="layout-body">
+    <Header />
+    
+    <main class="layout-main">
+      <slot />
+    </main>
+
+    <!-- ================= Footer ================= -->
+    <footer class="site-footer">
+      <div class="footer-container">
+        
+        <!-- سمت راست (کپی‌رایت) -->
+        <div class="copyright">
+          <span>&copy; {currentYear} BaqiShelf.</span>
+          <span class="rights">تمامی حقوق محفوظ است.</span>
+        </div>
+
+        <!-- سمت چپ (ورژن) -->
+        <div class="version">
+          {siteVersion}
+        </div>
+
+      </div>
+    </footer>
+
+  </body>
 </html>
+
+<style>
+  /* =========================================
+     استایل‌های ساختاری (چسباندن فوتر به پایین)
+     ========================================= */
+  .layout-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* حداقل ارتفاع برابر با کل صفحه نمایش */
+    margin: 0;
+  }
+
+  .layout-main {
+    flex: 1; /* این خط باعث می‌شود main تمام فضای خالی را پر کند و فوتر را به پایین هل دهد */
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+    box-sizing: border-box;
+  }
+
+  /* =========================================
+     استایل‌های فوتر (مینیمال و مدرن)
+     ========================================= */
+  .site-footer {
+    border-top: 1px solid #222;
+    background: #0a0a0a;
+    padding: 1.5rem 0;
+    margin-top: 4rem; /* فاصله از محتوای بالای سایت */
+  }
+
+  .footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between; /* یکی سمت راست، یکی سمت چپ */
+    align-items: center;
+  }
+
+  .copyright {
+    color: #888;
+    font-size: 0.9rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .rights {
+    opacity: 0.7;
+  }
+
+  .version {
+    color: #555;
+    font-size: 0.8rem;
+    font-family: monospace; /* فونت مخصوص برنامه‌نویسی برای ورژن */
+    letter-spacing: 1px;
+    background: #111;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #222;
+  }
+
+  /* =========================================
+     Mobile Responsive
+     ========================================= */
+  @media (max-width: 600px) {
+    .layout-main {
+      padding: 1.5rem 1rem;
+    }
+    
+    .footer-container {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+    }
+
+    .copyright {
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+  }
+</style>
