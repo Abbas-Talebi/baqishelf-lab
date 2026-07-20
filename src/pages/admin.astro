@@ -2,11 +2,20 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import AdminUI from "../components/AdminUI.jsx";
 
-// خواندن کلیدها از فایل .env
 const tmdbKey = import.meta.env.TMDB_API_KEY || "";
-const rawgKey = import.meta.env.RAWG_API_KEY || ""; // برای بازی‌ها (اختیاری)
+const igdbClientId = import.meta.env.IGDB_CLIENT_ID || "";
+const igdbToken = import.meta.env.IGDB_ACCESS_TOKEN || "";
+const spotifyClientId = import.meta.env.SPOTIFY_CLIENT_ID || "";
+const spotifyClientSecret = import.meta.env.SPOTIFY_CLIENT_SECRET || "";
 ---
 
 <BaseLayout title="پنل مدیریت">
-  <AdminUI client:only="react" tmdbKey={tmdbKey} rawgKey={rawgKey} />
+  <AdminUI 
+    client:only="react" 
+    tmdbKey={tmdbKey} 
+    igdbClientId={igdbClientId} 
+    igdbToken={igdbToken} 
+    spotifyClientId={spotifyClientId}
+    spotifyClientSecret={spotifyClientSecret}
+  />
 </BaseLayout>

@@ -10,7 +10,7 @@ graphics_rating: 5
 technical_rating: 4
 status: completed
 year: 2010
-date_finished: 2026-07-12T00:00:00.000Z
+date_finished: 2023-07-12T00:00:00.000Z
 platforms:
   - PC
 genres:

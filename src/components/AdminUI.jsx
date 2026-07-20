@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react';
 function FormFields({ pData, setPData, item, type, statusOptions }) {
   const inputStyle = { width: '100%', padding: '0.5rem', background: '#222', color: 'white', border: '1px solid #444', borderRadius: '4px' };
 
-  // تگ‌های سریع آپدیت شدند
   const quickTags = ['favorite', 'masterpiece', 'hidden-gem', 'Bullshit'];
 
   const handleAddTag = (tag) => {
@@ -17,7 +16,6 @@ function FormFields({ pData, setPData, item, type, statusOptions }) {
     }
   };
 
-  // تابع کنترل نمره (جلوگیری از وارد کردن عدد بالای ۵ یا زیر ۰)
   const handleRatingChange = (field, value) => {
     let num = parseFloat(value);
     if (isNaN(num)) {
@@ -63,12 +61,7 @@ function FormFields({ pData, setPData, item, type, statusOptions }) {
       <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: '120px' }}>
           <label style={{ display: 'block', marginBottom: '0.3rem' }}>نمره کلی (از ۵):</label>
-          <input 
-            type="number" step="0.1" min="0" max="5" 
-            value={pData.rating} 
-            onChange={e => handleRatingChange('rating', e.target.value)} 
-            style={inputStyle} 
-          />
+          <input type="number" step="0.1" min="0" max="5" value={pData.rating} onChange={e => handleRatingChange('rating', e.target.value)} style={inputStyle} />
         </div>
         <div style={{ flex: 1, minWidth: '150px' }}>
           <label style={{ display: 'block', marginBottom: '0.3rem' }}>وضعیت:</label>
@@ -140,7 +133,7 @@ function FormFields({ pData, setPData, item, type, statusOptions }) {
 // =========================================================
 // کامپوننت اصلی پنل ادمین
 // =========================================================
-export default function AdminUI({ tmdbKey, rawgKey }) {
+export default function AdminUI({ tmdbKey, igdbClientId, igdbToken }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
@@ -209,6 +202,11 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
     return `${safeTitle}-${year || 'unknown'}`;
   };
 
+  const escapeYaml = (str) => {
+    if (!str) return '';
+    return str.toString().replace(/"/g, '\\"');
+  };
+
   const createMarkdownText = (itemType, item, pData) => {
     const slug = generateSlug(item.title, item.year);
     const coverPath = `${itemType}s/${slug}.webp`;
@@ -216,7 +214,7 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
     const genresArray = pData.genres ? pData.genres.split(',').map(g => g.trim()).filter(g => g) : [];
 
     let md = `---\n`;
-    md += `title: "${item.title}"\n\n`;
+    md += `title: "${escapeYaml(item.title)}"\n\n`;
     
     if (item.cover) md += `source_image: "${item.cover}"\n`;
     md += `cover: "${item.cover ? coverPath : ''}"\n`;
@@ -245,16 +243,16 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
     if (itemType === 'game') {
       if (pData.platforms) {
         const plats = pData.platforms.split(',').map(p => p.trim()).filter(p => p);
-        if (plats.length > 0) md += `platforms:\n${plats.map(p => `  - ${p}`).join('\n')}\n\n`;
+        if (plats.length > 0) md += `platforms:\n${plats.map(p => `  - "${escapeYaml(p)}"`).join('\n')}\n\n`;
       }
       if (genresArray.length > 0) md += `genres:\n${genresArray.map(g => `  - ${g}`).join('\n')}\n\n`;
-      if (pData.developer) md += `developer: "${pData.developer}"\n`;
-      if (pData.publisher) md += `publisher: "${pData.publisher}"\n\n`;
+      if (pData.developer) md += `developer: "${escapeYaml(pData.developer)}"\n`;
+      if (pData.publisher) md += `publisher: "${escapeYaml(pData.publisher)}"\n\n`;
       if (pData.completion_percentage) md += `completion_percentage: ${pData.completion_percentage}\n\n`;
       if (pData.achievements_unlocked) md += `achievements_unlocked: ${pData.achievements_unlocked}\n`;
       if (pData.achievements_total) md += `achievements_total: ${pData.achievements_total}\n\n`;
     } else if (itemType === 'movie') {
-      if (pData.director) md += `director: "${pData.director}"\n`;
+      if (pData.director) md += `director: "${escapeYaml(pData.director)}"\n`;
       if (pData.runtime) md += `runtime: ${pData.runtime}\n\n`;
       if (genresArray.length > 0) md += `genres:\n${genresArray.map(g => `  - ${g}`).join('\n')}\n\n`;
     } else if (itemType === 'series') {
@@ -262,24 +260,24 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
       if (pData.episodes) md += `episodes: ${pData.episodes}\n\n`;
       if (genresArray.length > 0) md += `genres:\n${genresArray.map(g => `  - ${g}`).join('\n')}\n\n`;
     } else if (itemType === 'book') {
-      if (pData.author) md += `author: "${pData.author}"\n`;
+      if (pData.author) md += `author: "${escapeYaml(pData.author)}"\n`;
       if (pData.pages) md += `pages: ${pData.pages}\n\n`;
       if (genresArray.length > 0) md += `genres:\n${genresArray.map(g => `  - ${g}`).join('\n')}\n\n`;
     } else if (itemType === 'music') {
-      if (pData.artist || item.desc) md += `artist: "${pData.artist || item.desc}"\n\n`;
+      if (pData.artist || item.desc) md += `artist: "${escapeYaml(pData.artist || item.desc)}"\n\n`;
       if (genresArray.length > 0) md += `genres:\n${genresArray.map(g => `  - ${g}`).join('\n')}\n\n`;
     }
 
     if (tagsArray.length > 0) md += `tags:\n${tagsArray.map(t => `  - ${t}`).join('\n')}\n\n`;
-    if (pData.summary) md += `summary: "${pData.summary}"\n`;
+    if (pData.summary) md += `summary: "${escapeYaml(pData.summary)}"\n`;
     md += `---\n`;
 
     return { md, slug };
   };
 
-  const fetchWithProxy = async (url) => {
+  const fetchWithProxy = async (url, options = {}) => {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, options);
       if (!res.ok) throw new Error('Direct failed');
       return await res.json();
     } catch (e) {
@@ -290,17 +288,130 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
     }
   };
 
-  const fetchFromAPI = async (searchQuery, searchType) => {
-    let targetUrl = '';
+  // =========================================================
+  // موتور جستجوی دوگانه موسیقی (iTunes + MusicBrainz)
+  // =========================================================
+  const searchMusic = async (searchQuery) => {
+    let combinedResults = [];
+    let errors = [];
+
+    // 1. جستجو در iTunes (برای موسیقی‌های پاپ و ایرانی)
+    const searchITunes = async () => {
+      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=album&limit=20`;
+      const res = await fetchWithProxy(url);
+      return (res.results || []).map(item => ({
+        id: `itunes-${item.collectionId}`,
+        title: item.collectionName,
+        year: item.releaseDate ? item.releaseDate.split('-')[0] : '',
+        cover: item.artworkUrl100?.replace('100x100bb', '600x600bb'),
+        desc: item.artistName,
+        artist: item.artistName || '',
+        genres: item.primaryGenreName ? [item.primaryGenreName] : [],
+        source: 'iTunes'
+      }));
+    };
+
+    // 2. جستجو در MusicBrainz (برای دیسکوگرافی‌های کامل و خارجی)
+    const searchMusicBrainz = async () => {
+      const url = `https://musicbrainz.org/ws/2/release?query=${encodeURIComponent(searchQuery)}&limit=20&fmt=json`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'BaqiShelf/1.0 ( admin@baqishelf.local )' }
+      });
+      if (!res.ok) throw new Error('MusicBrainz failed');
+      const data = await res.json();
+      
+      return data.releases.map(item => ({
+        id: `mb-${item.id}`,
+        title: item.title,
+        year: item.date ? item.date.split('-')[0] : '',
+        // آدرس کاور آرت آرشیو (ممکن است عکس نداشته باشد که در UI هندل می‌شود)
+        cover: `https://coverartarchive.org/release/${item.id}/front`,
+        desc: item['artist-credit'] ? item['artist-credit'].map(a => a.name).join(', ') : 'هنرمند نامشخص',
+        artist: item['artist-credit'] ? item['artist-credit'].map(a => a.name).join(', ') : '',
+        genres: [],
+        source: 'MusicBrainz'
+      }));
+    };
+
+    // اجرای همزمان هر دو جستجو
+    const [itunesResult, mbResult] = await Promise.allSettled([
+      searchITunes(),
+      searchMusicBrainz()
+    ]);
+
+    if (itunesResult.status === 'fulfilled') combinedResults.push(...itunesResult.value);
+    else errors.push('iTunes');
+
+    if (mbResult.status === 'fulfilled') combinedResults.push(...mbResult.value);
+    else errors.push('MusicBrainz');
+
+    if (combinedResults.length === 0 && errors.length > 0) {
+      throw new Error(`خطا در دریافت اطلاعات از: ${errors.join(', ')}`);
+    }
+
+    return combinedResults;
+  };
+
+  const searchIGDB = async (searchQuery) => {
+    if (!igdbClientId || !igdbToken) throw new Error('IGDB_KEYS_MISSING');
     
+    const queryBody = `
+      search "${searchQuery}";
+      fields name, first_release_date, cover.image_id, platforms.name, genres.name, involved_companies.company.name, involved_companies.developer, involved_companies.publisher;
+      limit 5;
+    `;
+
+    try {
+      const proxyUrl = 'https://corsproxy.io/?https://api.igdb.com/v4/games';
+      const response = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: {
+          'Client-ID': igdbClientId,
+          'Authorization': `Bearer ${igdbToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'text/plain'
+        },
+        body: queryBody
+      });
+
+      if (!response.ok) throw new Error('IGDB Fetch Failed');
+      const data = await response.json();
+
+      return data.map(item => {
+        let devs = [];
+        let pubs = [];
+        if (item.involved_companies) {
+          item.involved_companies.forEach(ic => {
+            if (ic.developer) devs.push(ic.company.name);
+            if (ic.publisher) pubs.push(ic.company.name);
+          });
+        }
+
+        return {
+          id: item.id,
+          title: item.name,
+          year: item.first_release_date ? new Date(item.first_release_date * 1000).getFullYear().toString() : '',
+          cover: item.cover?.image_id ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${item.cover.image_id}.jpg` : null,
+          desc: item.platforms?.map(p => p.name).join(', '),
+          genres: item.genres?.map(g => g.name) || [],
+          platforms: item.platforms?.map(p => p.name).join(', ') || '',
+          developer: devs.join(', '),
+          publisher: pubs.join(', ')
+        };
+      });
+    } catch (e) {
+      throw new Error('IGDB_CONNECTION_ERROR');
+    }
+  };
+
+  const fetchFromAPI = async (searchQuery, searchType) => {
+    if (searchType === 'game') return await searchIGDB(searchQuery);
+    if (searchType === 'music') return await searchMusic(searchQuery);
+
+    let targetUrl = '';
     if (searchType === 'movie') targetUrl = `https://api.themoviedb.org/3/search/movie?api_key=${tmdbKey}&query=${encodeURIComponent(searchQuery)}&language=en-US`;
     else if (searchType === 'series') targetUrl = `https://api.themoviedb.org/3/search/tv?api_key=${tmdbKey}&query=${encodeURIComponent(searchQuery)}&language=en-US`;
     else if (searchType === 'book') targetUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchQuery)}`;
-    else if (searchType === 'music') targetUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=album&limit=5`;
-    else if (searchType === 'game') {
-      if (!rawgKey) throw new Error('RAWG_KEY_MISSING');
-      targetUrl = `https://api.rawg.io/api/games?key=${rawgKey}&search=${encodeURIComponent(searchQuery)}`;
-    }
 
     try {
       const data = await fetchWithProxy(targetUrl);
@@ -315,38 +426,22 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
           desc: item.overview,
         }));
       } else if (searchType === 'book') {
-        formattedResults = (data.docs || []).slice(0, 10).map(item => ({
-          id: item.key,
-          title: item.title,
-          year: item.first_publish_year ? item.first_publish_year.toString() : '',
-          cover: item.cover_i ? `https://covers.openlibrary.org/b/id/${item.cover_i}-L.jpg` : null,
-          desc: item.author_name ? item.author_name.join(', ') : 'نویسنده نامشخص',
-          author: item.author_name ? item.author_name.join(', ') : '',
-          pages: item.number_of_pages_median || '',
-          genres: item.subject ? item.subject.slice(0, 3) : [] 
-        }));
-      } else if (searchType === 'music') {
-        formattedResults = (data.results || []).map(item => ({
-          id: item.collectionId,
-          title: item.collectionName,
-          year: (item.releaseDate || '').split('-')[0],
-          cover: item.artworkUrl100?.replace('100x100', '600x600'),
-          desc: item.artistName,
-          artist: item.artistName || '',
-          genres: item.primaryGenreName ? [item.primaryGenreName] : []
-        }));
-      } else if (searchType === 'game') {
-        formattedResults = (data.results || []).map(item => ({
-          id: item.id,
-          title: item.name,
-          year: (item.released || '').split('-')[0],
-          cover: item.background_image,
-          desc: item.platforms?.map(p => p.platform.name).join(', ')
-        }));
+        formattedResults = (data.docs || []).slice(0, 10).map(item => {
+          let coverUrl = item.cover_i ? `https://covers.openlibrary.org/b/id/${item.cover_i}-L.jpg` : null;
+          return {
+            id: item.key,
+            title: item.title,
+            year: item.first_publish_year ? item.first_publish_year.toString() : '',
+            cover: coverUrl,
+            desc: item.author_name ? item.author_name.join(', ') : 'نویسنده نامشخص',
+            author: item.author_name ? item.author_name.join(', ') : '',
+            pages: item.number_of_pages_median || '',
+            genres: item.subject ? item.subject.slice(0, 3) : [] 
+          };
+        });
       }
       return formattedResults;
     } catch (e) {
-      if (e.message === 'RAWG_KEY_MISSING') throw e;
       return null; 
     }
   };
@@ -368,12 +463,13 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
         details.episodes = res.number_of_episodes || '';
         details.genres = res.genres?.map(g => g.name) || [];
       } else if (itemType === 'game') {
-        const url = `https://api.rawg.io/api/games/${item.id}?key=${rawgKey}`;
-        const res = await fetchWithProxy(url);
-        details.developer = res.developers?.map(d => d.name).join(', ') || '';
-        details.publisher = res.publishers?.map(p => p.name).join(', ') || '';
-        details.achievements_total = res.achievements_count || '';
-        details.genres = res.genres?.map(g => g.name) || [];
+        details.developer = item.developer || '';
+        details.publisher = item.publisher || ''; 
+        details.achievements_total = '';
+        details.genres = item.genres || [];
+      } else if (itemType === 'music') {
+        details.artist = item.artist || '';
+        details.genres = item.genres || []; 
       }
     } catch (e) {
       console.error("Failed to fetch deep details", e);
@@ -398,8 +494,8 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
         setMessage('✅ جستجو با موفقیت انجام شد!');
       }
     } catch (e) {
-      if (e.message === 'RAWG_KEY_MISSING') setMessage('❌ برای جستجوی بازی‌ها، باید کلید RAWG_API_KEY را در فایل .env قرار دهید.');
-      else setMessage('❌ خطای ناشناخته رخ داد.');
+      if (e.message === 'IGDB_KEYS_MISSING') setMessage('❌ برای جستجوی بازی‌ها، باید کلیدهای IGDB را در فایل .env قرار دهید.');
+      else setMessage(`❌ ${e.message}`);
       setResults([]);
     }
     setLoading(false);
@@ -417,7 +513,7 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
       ...initialPersonalData, 
       status: statusOptions[type][0].val, 
       date_finished: today, 
-      platforms: detailedItem.desc || '',
+      platforms: detailedItem.platforms || '',
       director: detailedItem.director || '',
       runtime: detailedItem.runtime || '',
       seasons: detailedItem.seasons || '',
@@ -469,7 +565,7 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
             ...initialPersonalData, 
             status: statusOptions[type][0].val, 
             date_finished: today, 
-            platforms: detailedItem.desc || '',
+            platforms: detailedItem.platforms || '',
             director: detailedItem.director || '',
             runtime: detailedItem.runtime || '',
             seasons: detailedItem.seasons || '',
@@ -487,12 +583,13 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
           generatedItems.push({ item: detailedItem, pData, md, slug });
         }
       } catch (e) {
-        if (e.message === 'RAWG_KEY_MISSING') {
-          setMessage('❌ برای جستجوی بازی‌ها، کلید RAWG_API_KEY نیاز است.');
+        if (e.message === 'IGDB_KEYS_MISSING') {
+          setMessage('❌ برای جستجوی بازی‌ها، کلیدهای IGDB نیاز است.');
           setLoading(false); return;
         }
       }
-      await new Promise(r => setTimeout(r, 500)); 
+      // وقفه بیشتر برای موسیقی تا MusicBrainz بلاک نکند (1.2 ثانیه)
+      await new Promise(r => setTimeout(r, type === 'music' ? 1200 : 500)); 
     }
     
     setBulkResults(generatedItems);
@@ -630,9 +727,23 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {results.map((item, idx) => (
               <div key={idx} style={{ display: 'flex', gap: '1rem', padding: '1rem', background: '#111', borderRadius: '8px', border: '1px solid #333' }}>
-                {item.cover ? <img src={item.cover} alt={item.title} style={{ width: '80px', height: '120px', objectFit: 'cover', borderRadius: '4px' }} /> : <div style={{ width: '80px', height: '120px', background: '#222', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}>بدون عکس</div>}
+                {/* مدیریت هوشمند عکس‌های خراب MusicBrainz */}
+                {item.cover ? (
+                  <img 
+                    src={item.cover} 
+                    alt={item.title} 
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                    style={{ width: '80px', height: '120px', objectFit: 'cover', borderRadius: '4px' }} 
+                  />
+                ) : null}
+                
+                <div style={{ display: item.cover ? 'none' : 'flex', width: '80px', height: '120px', background: '#222', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', borderRadius: '4px' }}>بدون عکس</div>
+                
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0' }}>{item.title} ({item.year})</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <h3 style={{ margin: 0 }}>{item.title} ({item.year})</h3>
+                    {item.source && <span style={{ background: '#333', padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.7rem', color: '#aaa' }}>{item.source}</span>}
+                  </div>
                   <p style={{ margin: 0, opacity: 0.7, fontSize: '0.9rem' }}>{item.desc?.substring(0, 100)}...</p>
                   <button onClick={() => handleSelect(item)} style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>تکمیل اطلاعات</button>
                 </div>
@@ -665,7 +776,7 @@ export default function AdminUI({ tmdbKey, rawgKey }) {
         <>
           <h2>🎉 فایل شما آماده است!</h2>
           <div style={{ background: '#222', padding: '1rem', borderRadius: '8px', marginBottom: '2rem' }}>
-            <p>💡 <strong>راهنما:</strong> فایل زیر را دانلود کنید و در پوشه <code>src/content/{type}s/</code> قرار دهید. سپس در ترمینال دستور <code>npm run process-images</code> را اجرا کنید تا عکس به صورت خودکار دانلود و بهینه شود.</p>
+            <p>💡 <strong>راهنما:</strong> فایل زیر را دانلود کنید و در پوشه <code>src/content/{type === 'music' || type === 'series' ? type : type + 's'}/</code> قرار دهید. سپس در ترمینال دستور <code>npm run process-images</code> را اجرا کنید تا عکس به صورت خودکار دانلود و بهینه شود.</p>
           </div>
           
           <textarea readOnly value={generatedMD} rows="15" style={{ width: '100%', background: '#000', color: '#0f0', padding: '1rem', fontFamily: 'monospace', border: '1px solid #333', borderRadius: '8px' }} />

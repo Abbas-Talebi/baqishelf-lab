@@ -16,7 +16,7 @@ const allItems = [...games, ...movies, ...series, ...books, ...music];
 const totalItems = allItems.length;
 
 // ==========================================
-// محاسبات امتیازها (برای هیستوگرام رنگی)
+// محاسبات امتیازها
 // ==========================================
 const allRatings = allItems.map((item) => item.data.personal_rating).filter((r) => typeof r === "number" && r > 0);
 const averageRating = allRatings.length > 0 ? (allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length).toFixed(1) : "0.0";
@@ -28,13 +28,12 @@ allRatings.forEach((r) => {
 });
 const maxRatingCount = Math.max(...Object.values(ratingDist), 1); 
 
-// تابع تولید رنگ برای نوارهای امتیاز
 const getRatingColor = (star) => {
-  if (star === 5) return 'linear-gradient(90deg, #10b981, #34d399)'; // سبز
-  if (star === 4) return 'linear-gradient(90deg, #84cc16, #a3e635)'; // سبز روشن
-  if (star === 3) return 'linear-gradient(90deg, #eab308, #facc15)'; // زرد
-  if (star === 2) return 'linear-gradient(90deg, #f97316, #fb923c)'; // نارنجی
-  return 'linear-gradient(90deg, #ef4444, #f87171)'; // قرمز
+  if (star === 5) return 'linear-gradient(90deg, #10b981, #34d399)'; 
+  if (star === 4) return 'linear-gradient(90deg, #84cc16, #a3e635)'; 
+  if (star === 3) return 'linear-gradient(90deg, #eab308, #facc15)'; 
+  if (star === 2) return 'linear-gradient(90deg, #f97316, #fb923c)'; 
+  return 'linear-gradient(90deg, #ef4444, #f87171)'; 
 };
 
 // ==========================================
@@ -60,7 +59,7 @@ const totalCompletedGames = games.filter(g => g.data.status === 'completed').len
 const totalPages = books.reduce((sum, b) => sum + (b.data.pages ?? 0), 0);
   
 // ==========================================
-// محاسبات ژانرها (با قابلیت "سایرین")
+// محاسبات ژانرها
 // ==========================================
 const genreCounts = {};
 allItems.forEach(item => {
@@ -68,7 +67,7 @@ allItems.forEach(item => {
 });
 
 const sortedGenres = Object.entries(genreCounts).sort((a, b) => b[1] - a[1]);
-const MAX_GENRES = 11; // تعداد ژانرهای اصلی که نمایش داده می‌شوند
+const MAX_GENRES = 11; 
 
 let finalGenres = sortedGenres.slice(0, MAX_GENRES);
 const othersCount = sortedGenres.slice(MAX_GENRES).reduce((sum, [, count]) => sum + count, 0);
@@ -110,7 +109,19 @@ function shuffleArray(array, seed) {
   return shuffled;
 }
 
-const mapToCard = (arr, type) => arr.map(i => ({ title: i.data.title, cover: i.data.cover, slug: `${base}${type === 'music' ? 'music' : type + 's'}/${i.id}`, type, date: i.data.date_finished ?? i.data.date_watched ?? i.data.date_listened, rating: i.data.personal_rating, tags: i.data.tags || [] }));
+// 🐛 حل مشکل seriess:
+const mapToCard = (arr, type) => arr.map(i => {
+  const folder = (type === 'music' || type === 'series') ? type : type + 's';
+  return { 
+    title: i.data.title, 
+    cover: i.data.cover, 
+    slug: `${base}${folder}/${i.id}`, 
+    type, 
+    date: i.data.date_finished ?? i.data.date_watched ?? i.data.date_listened, 
+    rating: i.data.personal_rating, 
+    tags: i.data.tags || [] 
+  };
+});
 
 const recentEntries = [
   ...mapToCard(games.filter(i => i.data.date_finished), 'game'),
@@ -245,7 +256,6 @@ const getTypeIcon = (type) => {
     
     <div class="dashboard-grid">
       
-      <!-- Game Stats -->
       <div class="glass-card">
         <div class="card-header"><span class="icon">🎮</span><span>داشبورد بازی‌ها</span></div>
         
@@ -268,7 +278,6 @@ const getTypeIcon = (type) => {
         <div class="progress-bar"><div class="completed-fill" style={`width:${games.length > 0 ? (totalCompletedGames / games.length) * 100 : 0}%`}></div></div>
       </div>
 
-      <!-- Book Stats -->
       <div class="glass-card">
         <div class="card-header"><span class="icon">📚</span><span>داشبورد کتاب‌ها</span></div>
         <div class="big-stat">
@@ -281,7 +290,6 @@ const getTypeIcon = (type) => {
         </div>
       </div>
 
-      <!-- Media Distribution -->
       <div class="glass-card">
         <div class="card-header"><span class="icon">📦</span><span>ترکیب آرشیو</span></div>
         <div class="media-list">
@@ -296,7 +304,7 @@ const getTypeIcon = (type) => {
     </div>
   </section>
 
-  <!-- Charts Section (3 Columns on Desktop, Equal Height) -->
+  <!-- Charts Section -->
   <section class="charts-container">
     
     <div class="chart-box equal-box">
@@ -306,7 +314,6 @@ const getTypeIcon = (type) => {
       </div>
     </div>
     
-    <!-- هیستوگرام جدید و مدرن امتیازها -->
     <div class="chart-box equal-box">
       <h2>⭐ توزیع امتیازها</h2>
       <div class="chart-content-wrapper rating-histogram">
@@ -329,7 +336,6 @@ const getTypeIcon = (type) => {
       </div>
     </div>
 
-    <!-- وضعیت کلی آرشیو -->
     <div class="chart-box equal-box">
       <h2>📌 وضعیت کلی آرشیو</h2>
       <div class="chart-content-wrapper status-overview">
@@ -380,174 +386,59 @@ const getTypeIcon = (type) => {
     overflow: hidden;
   }
 
-  .hero-glow {
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
-    filter: blur(100px);
-    z-index: 0;
-    opacity: 0.5;
-  }
-
+  .hero-glow { position: absolute; width: 300px; height: 300px; border-radius: 50%; filter: blur(100px); z-index: 0; opacity: 0.5; }
   .glow-1 { top: -100px; left: -50px; background: rgba(139, 92, 246, 0.6); }
   .glow-2 { bottom: -100px; right: -50px; background: rgba(59, 130, 246, 0.4); }
 
   .hero-content { position: relative; z-index: 1; }
 
-  .main-hero h1 {
-    font-size: 4rem;
-    font-weight: 900;
-    margin: 0 0 1rem 0;
-    background: linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #8b5cf6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: -1px;
-  }
-
+  .main-hero h1 { font-size: 4rem; font-weight: 900; margin: 0 0 1rem 0; background: linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #8b5cf6 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px; }
   .hero-text { font-size: 1.2rem; color: #a3a3a3; max-width: 600px; margin: 0 auto 2.5rem auto; line-height: 1.6; }
-
   .hero-stats { display: flex; justify-content: center; gap: 1.5rem; flex-wrap: wrap; }
 
-  .stat-badge {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 1rem 2rem;
-    border-radius: 16px;
-    display: flex;
-    flex-direction: column;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  }
-
+  .stat-badge { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 1rem 2rem; border-radius: 16px; display: flex; flex-direction: column; backdrop-filter: blur(10px); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
   .stat-num { font-size: 1.8rem; font-weight: 800; color: #fff; }
   .stat-text { font-size: 0.9rem; color: #888; margin-top: 0.2rem; }
 
   /* =========================================
-     Horizontal Sliders (With Custom Scrollbar)
+     Horizontal Sliders
      ========================================= */
   .slider-section { margin-bottom: 4rem; }
   .section-header { margin-bottom: 1.5rem; display: flex; align-items: baseline; gap: 1rem; }
   .section-header h2 { margin: 0; font-size: 1.6rem; }
   .subtitle { opacity: 0.5; font-size: 0.9rem; }
 
-  .horizontal-scroll {
-    display: flex;
-    gap: 1.5rem;
-    overflow-x: auto;
-    padding-bottom: 1rem; /* فضا برای اسکرول‌بار */
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  /* اسکرول‌بار اختصاصی و زیبا برای کامپیوتر */
-  .horizontal-scroll::-webkit-scrollbar {
-    height: 8px;
-  }
-  .horizontal-scroll::-webkit-scrollbar-track {
-    background: rgba(255,255,255,0.05);
-    border-radius: 10px;
-  }
-  .horizontal-scroll::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.4);
-    border-radius: 10px;
-  }
-  .horizontal-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 92, 246, 0.8);
-  }
+  .horizontal-scroll { display: flex; gap: 1.5rem; overflow-x: auto; padding-bottom: 1rem; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+  .horizontal-scroll::-webkit-scrollbar { height: 8px; }
+  .horizontal-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+  .horizontal-scroll::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.4); border-radius: 10px; }
+  .horizontal-scroll::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.8); }
 
-  .media-card {
-    min-width: 150px;
-    max-width: 150px;
-    scroll-snap-align: start;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.2s ease;
-  }
+  .media-card { min-width: 150px; max-width: 150px; scroll-snap-align: start; text-decoration: none; color: inherit; transition: transform 0.2s ease; }
   .media-card:hover { transform: translateY(-6px); }
 
-  .card-image-wrapper {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 2 / 3;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #1a1a1a;
-    box-shadow: 0 6px 15px rgba(0,0,0,0.4);
-    border: 1px solid #2a2a2a;
-  }
-
-  .blur-bg {
-    position: absolute;
-    inset: -20px;
-    background-size: cover;
-    background-position: center;
-    filter: blur(15px) brightness(0.4);
-    z-index: 1;
-  }
-
-  .card-img {
-    position: relative;
-    z-index: 2;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .card-img.square {
-    object-fit: contain;
-    padding: 10px;
-  }
-
+  .card-image-wrapper { position: relative; width: 100%; aspect-ratio: 2 / 3; border-radius: 12px; overflow: hidden; background: #1a1a1a; box-shadow: 0 6px 15px rgba(0,0,0,0.4); border: 1px solid #2a2a2a; }
+  .blur-bg { position: absolute; inset: -20px; background-size: cover; background-position: center; filter: blur(15px) brightness(0.4); z-index: 1; }
+  .card-img { position: relative; z-index: 2; width: 100%; height: 100%; object-fit: cover; }
+  .card-img.square { object-fit: contain; padding: 10px; }
   .no-image { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.2; position: relative; z-index: 2; }
 
-  .card-type-badge {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: rgba(20, 20, 20, 0.8);
-    backdrop-filter: blur(8px);
-    padding: 6px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    border: 1px solid rgba(255,255,255,0.1);
-    z-index: 3;
-    line-height: 1;
-  }
+  .card-type-badge { position: absolute; top: 8px; right: 8px; background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(8px); padding: 6px; border-radius: 8px; font-size: 0.9rem; border: 1px solid rgba(255,255,255,0.1); z-index: 3; line-height: 1; }
+  .card-rating-badge { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); padding: 4px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); z-index: 3; }
 
-  .card-rating-badge {
-    position: absolute;
-    bottom: 8px;
-    left: 8px;
-    background: rgba(0,0,0,0.85);
-    backdrop-filter: blur(4px);
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: bold;
-    color: #fbbf24;
-    border: 1px solid rgba(251, 191, 36, 0.3);
-    z-index: 3;
-  }
-
-  .card-info {
-  margin-top: 0.8rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-  .card-info h3 {
+  .card-info { margin-top: 0.8rem; }
+.card-info h3 {
   margin: 0;
   font-size: 0.95rem;
   color: #eee;
-  line-height: 1.35;
-  text-align: center;
 
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 
   overflow: hidden;
+  text-align: center;
+  line-height: 1.4;
 }
   .card-date { font-size: 0.8rem; color: #888; }
 
@@ -557,14 +448,7 @@ const getTypeIcon = (type) => {
   .dashboards-container { margin-bottom: 4rem; }
   .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
 
-  .glass-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-    border: 1px solid #2f2f2f;
-    border-radius: 18px;
-    padding: 1.5rem;
-    backdrop-filter: blur(10px);
-  }
-
+  .glass-card { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border: 1px solid #2f2f2f; border-radius: 18px; padding: 1.5rem; backdrop-filter: blur(10px); }
   .card-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.5rem; font-weight: bold; color: #c4b5fd; font-size: 1.1rem; }
   .stat-row { display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 0.5rem; color: #ddd; }
   
@@ -582,51 +466,24 @@ const getTypeIcon = (type) => {
   .media-item:last-child { border-bottom: none; }
 
   /* =========================================
-     Charts (3 Columns, Equal Height)
+     Charts
      ========================================= */
-  .charts-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1.5rem;
-  }
-
-  .chart-box {
-    background: #111;
-    border: 1px solid #222;
-    border-radius: 18px;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* کلاس جادویی برای هم‌اندازه کردن ۳ ستون */
-  .equal-box {
-    height: 100%;
-  }
-
-  .chart-content-wrapper {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
+  .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+  .chart-box { background: #111; border: 1px solid #222; border-radius: 18px; padding: 1.5rem; display: flex; flex-direction: column; }
+  .equal-box { height: 100%; }
+  .chart-content-wrapper { flex: 1; display: flex; flex-direction: column; justify-content: center; }
   .chart-box h2 { margin-top: 0; margin-bottom: 1.5rem; font-size: 1.2rem; text-align: center; color: #eee; }
   .full-width { grid-column: 1 / -1; }
 
-  /* هیستوگرام جدید امتیازها */
   .rating-histogram { display: flex; flex-direction: column; gap: 1rem; padding: 0.5rem 0; }
   .histogram-row { display: flex; align-items: center; gap: 1rem; }
-  
   .stars-wrapper { display: flex; align-items: center; gap: 0.3rem; width: 40px; justify-content: flex-end; }
   .star-icon { color: #fbbf24; font-size: 1.1rem; }
   .star-number { font-weight: bold; font-size: 1.1rem; color: #fff; }
-  
   .bar-container { flex: 1; height: 14px; background: #222; border-radius: 6px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
   .bar-fill { height: 100%; border-radius: 6px; transition: width 1s ease-out; box-shadow: 0 0 10px rgba(255,255,255,0.1); }
   .count { width: 35px; text-align: left; font-size: 1rem; color: #aaa; font-weight: bold; }
 
-  /* لیست وضعیت کلی آرشیو */
   .status-overview { display: flex; flex-direction: column; gap: 1rem; }
   .status-item { display: flex; align-items: center; gap: 1rem; padding: 1rem; border-radius: 12px; background: #1a1a1a; border: 1px solid #222; transition: transform 0.2s; }
   .status-item:hover { transform: translateX(-5px); }
@@ -635,12 +492,9 @@ const getTypeIcon = (type) => {
   .status-item.playing .icon { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
   .status-item.planned .icon { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2); }
   .status-item .info { display: flex; flex-direction: column; }
-  .status-item .label { font-size: 0.9rem; color: #888; }
+  .status-item .label { font-size: 0.85rem; color: #888; }
   .status-item .value { font-size: 1.3rem; font-weight: bold; color: #fff; }
 
-  /* =========================================
-     Mobile Responsive
-     ========================================= */
   @media (max-width: 768px) {
     .main-hero { padding: 3rem 1.5rem; }
     .main-hero h1 { font-size: 2.8rem; }

@@ -266,19 +266,30 @@ const clientData = JSON.stringify(allEntries);
     margin-bottom: 4rem;
   }
 
+  /* کادر سال: سفید، متن مشکی، تراز شده با خط عمودی */
   .year-header {
-    background: #1a1a1a;
-    color: #fff;
+    background: #ffffff; /* پس‌زمینه تمام سفید */
+    color: #000000; /* متن سیاه */
     text-align: center;
     padding: 1rem;
     border-radius: 16px;
     font-size: 1.8rem;
     font-weight: 900;
     margin-bottom: 2rem;
-    border: 1px solid #333;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    width: 100%;
+    box-shadow: 0 4px 20px rgba(255,255,255,0.1);
+    
+    /* تنظیم عرض و تراز شدن با خط عمودی */
+    width: calc(100% - 15px); /* 15px از سمت راست کم می‌شود */
+    margin-right: 15px; /* هل دادن به سمت چپ تا دقیقاً با خط عمودی مماس شود */
     box-sizing: border-box;
+  }
+
+  /* در موبایل که خط عمودی جابجا می‌شود، کادر سال هم باید جابجا شود */
+  @media (max-width: 600px) {
+    .year-header {
+      width: calc(100% - 5px);
+      margin-right: 5px;
+    }
   }
 
   .month-group {
